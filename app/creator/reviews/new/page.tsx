@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { Suspense, ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type OrderItem = {
@@ -170,7 +170,7 @@ function normalizeReviewTitles(input: any): ReviewTitleItem[] {
     .filter((item: ReviewTitleItem) => item.label);
 }
 
-export default function CreatorNewReviewPage() {
+function CreatorNewReviewPageInner() {
   const searchParams = useSearchParams();
  const reviewId = searchParams.get("reviewId") || "";
 const orderId = searchParams.get("orderId") || "";
@@ -985,6 +985,13 @@ const orderId = searchParams.get("orderId") || "";
         )}
       </div>
     </div>
+  );
+}
+export default function CreatorNewReviewPage() {
+  return (
+    <Suspense fallback={<div style={{padding:20}}>Loading...</div>}>
+      <CreatorNewReviewPageInner />
+    </Suspense>
   );
 }
 
