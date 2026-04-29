@@ -1,0 +1,120 @@
+[
+  {
+    "id": "user-1774102513149",
+    "name": "จำรัสฟาร์ม",
+    "email": "mc@gmail.com",
+    "passwordHash": "$2b$10$DlYLe8QYajeCbJyVwxGwfu.wNyI05pGlJqJysrHrmjP7FkGSjBjZy",
+    "role": "admin",
+    "createdAt": "2026-03-21T14:15:13.149Z",
+    "phone": "081-9911335",
+    "address": {
+      "recipientName": "มีชัย หวังศุภกิจโกศล",
+      "phone": "081-9911335",
+      "line1": "133 หมู่ 2 ",
+      "subdistrict": "หัวลำ",
+      "district": "ท่าหลวง",
+      "province": "ลพบุรี ",
+      "postalCode": "15230",
+      "note": ""
+    },
+    "verifiedBuyer": true,
+    "creatorEnabled": true,
+    "creatorStatus": "approved",
+    "creatorDisplayName": "สมหวังนะครับ",
+    "creatorCode": "1133",
+    "avatarUrl": "",
+    "payoutAccount": {
+      "bankName": "",
+      "accountName": "",
+      "accountNumber": "",
+      "promptPay": "081-9911335",
+      "status": "missing",
+      "bankCode": "",
+      "branchName": "",
+      "lastUpdatedAt": null,
+      "verifiedAt": null
+    },
+    "stats": {
+      "reviews": 0,
+      "orders": 4,
+      "commissionPending": 0,
+      "commissionPaid": 0,
+      "reviewsCount": 0,
+      "ordersCount": 4,
+      "commissionTotal": 0,
+      "viewsTotal": 0,
+      "clicksTotal": 0,
+      "conversionOrders": 0
+    },
+    "permissions": {
+      "canSubmitReview": true,
+      "canReceiveCommission": true
+    },
+    "creatorPayment": {
+      "promptPay": "",
+      "bankName": "กสิกรไทย",
+      "accountName": "มีชัย หวังศุภกิจโกศล",
+      "accountNumber": "123-4526-72-4"
+    }
+  },
+  {
+    "id": "user-1776900360086",
+    "name": "นงนุช",
+    "email": "nuch@gmail.com",
+    "passwordHash": "$2b$10$dknQpj9HqXWsgKCcaRqEP.tkx2VgK1Pp45d.k/pOve0M3mo0CumFm",
+    "role": "customer",
+    "createdAt": "2026-04-22T23:26:00.086Z",
+    "creatorEnabled": false,
+    "creatorStatus": "",
+    "creatorDisplayName": "",
+    "creatorCode": "",
+    "permissions": {
+      "canSubmitReview": false,
+      "canReceiveCommission": false
+    },
+    "phone": "",
+    "address": {
+      "recipientName": "นงนุช ไชยสุข",
+      "phone": "044-441064",
+      "line1": "อ.ปักธงชัย ต.เมืองปัก",
+      "subdistrict": "เมืองปัก",
+      "district": "ปักธงชัย",
+      "province": "นครราชสีมา",
+      "postalCode": "30280",
+      "note": ""
+    }
+  },
+  {
+    "id": "user-1776979985826",
+    "name": "ต่ายขนมไทย",
+    "email": "tay@gmail.com",
+    "passwordHash": "$2b$10$9A9lFumqEmxFH/iU6JVe9OuLfzpUPJEowtkUlDTGvmTgE2D421lCG",
+    "role": "customer",
+    "createdAt": "2026-04-23T21:33:05.826Z",
+    "creatorEnabled": true,
+    "creatorStatus": "approved",
+    "creatorDisplayName": "แม่ค้าขนมไทย",
+    "creatorCode": "1124",
+    "creatorPayment": {
+      "promptPay": "",
+      "bankName": "กสิกรไทย",
+      "accountName": "สุกัลญา",
+      "accountNumber": "123-4567-8-9"
+    },
+    "permissions": {
+      "canSubmitReview": true,
+      "canReceiveCommission": true
+    },
+    "phone": "081-3658211",
+    "address": {
+      "recipientName": "สุกัลญา",
+      "phone": "0819852641",
+      "line1": "ตลาดชาญชัย",
+      "subdistrict": "ลำนารายณ์",
+      "district": "ชัยบาดาล",
+      "province": "ลพบุรี",
+      "postalCode": "15240",
+      "note": ""
+    }
+  }
+]

@@ -1,0 +1,78 @@
+{
+  "categories": [
+    {
+      "id": "pet",
+      "name": "สัตว์เลี้ยง",
+      "children": [
+        {
+          "id": "cat",
+          "name": "แมว",
+          "children": [
+            {
+              "id": "fip",
+              "name": "FIP"
+            },
+            {
+              "id": "fungus-cat",
+              "name": "เชื้อราแมว"
+            },
+            {
+              "id": "immunity-cat",
+              "name": "ภูมิคุ้มกันแมว"
+            }
+          ]
+        },
+        {
+          "id": "dog",
+          "name": "สุนัข",
+          "children": [
+            {
+              "id": "yeast-dog",
+              "name": "ยีสต์สุนัข"
+            },
+            {
+              "id": "mange-dog",
+              "name": "ขี้เรื้อนสุนัข"
+            },
+            {
+              "id": "ticks-dog",
+              "name": "เห็บหมัดสุนัข"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "name": "ปศุสัตว์",
+      "children": [
+        {
+          "id": "cow",
+          "name": "วัว",
+          "children": [
+            {
+              "id": "cow-skin",
+              "name": "ผิวหนังวัว"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1776253545553",
+      "name": "ครัวเรือนแม่บ้าน",
+      "children": [
+        {
+          "id": "1776253568677",
+          "name": "ทำความสะอาด",
+          "children": [
+            {
+              "id": "1776253592745",
+              "name": "ล้างคราบติดแน่น"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

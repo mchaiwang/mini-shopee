@@ -1,0 +1,514 @@
+:root {
+  --brand: #ee4d2d;
+  --brand-hover: #d84324;
+  --brand-soft: #fff6f5;
+  --text: #222;
+  --muted: #667085;
+  --line: #f0f2f5;
+  --card: #ffffff;
+  --bg: #fafafa;
+
+  --success-bg: #ecfdf3;
+  --success-text: #027a48;
+  --success-line: #a6f4c5;
+
+  --warn-bg: #fff7ed;
+  --warn-text: #ea580c;
+  --warn-line: #fdba74;
+
+  --info-bg: #eff6ff;
+  --info-text: #2563eb;
+  --info-line: #bfdbfe;
+
+  --purple-bg: #f5f3ff;
+  --purple-text: #7c3aed;
+  --purple-line: #ddd6fe;
+
+  --danger-bg: #fef2f2;
+  --danger-text: #dc2626;
+  --danger-line: #fecaca;
+
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --shadow-brand: 0 12px 24px rgba(238, 77, 45, 0.18);
+
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+
+  /* ป้องกันการเลื่อนแนวนอนบนมือถือ */
+  overflow-x: hidden;
+
+  /* ปรับการ render ตัวอักษรให้คมชัดบนมือถือ */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+
+  /* iOS จะ zoom ถ้า input font < 16px - กันไม่ให้ zoom เวลาแตะ input */
+  font-size: 16px;
+}
+
+/* ป้องกัน input zoom บน iOS เมื่อ focus */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* layout */
+.page-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.section-block {
+  margin-bottom: 20px;
+}
+
+/* shopee-feel card */
+.ui-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-card-hover {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.ui-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: #ffd2c8;
+}
+
+/* header banner */
+.ui-hero {
+  background: linear-gradient(135deg, #ee4d2d 0%, #ff7337 55%, #ff9b76 100%);
+  color: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-brand);
+  padding: 24px;
+}
+
+/* buttons */
+.ui-btn {
+  height: 46px;
+  border: none;
+  border-radius: 14px;
+  padding: 0 18px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+
+  /* tap target ต้องใหญ่พอบนมือถือ */
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.ui-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ui-btn-primary {
+  background: linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(238, 77, 45, 0.2);
+}
+
+.ui-btn-primary:hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.ui-btn-secondary {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fdba74;
+}
+
+.ui-btn-secondary:hover {
+  background: #ffedd5;
+}
+
+.ui-btn-outline {
+  background: #fff;
+  color: var(--brand);
+  border: 1px solid #ffd0c5;
+}
+
+.ui-btn-outline:hover {
+  background: #fff7f5;
+}
+
+.ui-btn-danger {
+  background: #fff;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.ui-btn-danger:hover {
+  background: #fef2f2;
+}
+
+/* badges */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.ui-badge-brand {
+  background: var(--warn-bg);
+  color: var(--brand);
+  border: 1px solid #fdba74;
+}
+
+.ui-badge-success {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-line);
+}
+
+.ui-badge-info {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-line);
+}
+
+.ui-badge-purple {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+  border: 1px solid var(--purple-line);
+}
+
+.ui-badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-line);
+}
+
+.ui-badge-muted {
+  background: #f8fafc;
+  color: #475467;
+  border: 1px solid #e4e7ec;
+}
+
+/* forms */
+.ui-input,
+.ui-select,
+.ui-textarea {
+  width: 100%;
+  border: 1px solid #e4e7ec;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ui-input,
+.ui-select {
+  height: 48px;
+  padding: 0 14px;
+}
+
+.ui-textarea {
+  padding: 12px 14px;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.ui-input:focus,
+.ui-select:focus,
+.ui-textarea:focus {
+  border-color: #ffb4a2;
+  box-shadow: 0 0 0 4px rgba(238, 77, 45, 0.08);
+}
+
+/* titles */
+.ui-title-xl {
+  font-size: 36px;
+  line-height: 1.2;
+  font-weight: 900;
+  margin: 0;
+  color: #0f172a;
+}
+
+.ui-title-lg {
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 900;
+  margin: 0 0 12px;
+  color: #0f172a;
+}
+
+.ui-subtle {
+  color: var(--muted);
+}
+
+/* navbar feel */
+.site-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.site-navbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.site-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.site-brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(135deg, #ee4d2d 0%, #ff7a3d 100%);
+  box-shadow: 0 8px 18px rgba(238, 77, 45, 0.24);
+}
+
+/* product/order card helpers */
+.market-card {
+  background: #fff;
+  border: 1px solid #eef2f6;
+  border-radius: 20px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.market-card-body {
+  padding: 18px;
+}
+
+.market-price {
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.market-divider {
+  border: 0;
+  border-top: 1px dashed #e5e7eb;
+  margin: 16px 0;
+}
+
+/* ============================================== */
+/* MOBILE MENU (hamburger) - ใช้ใน site-navbar    */
+/* ============================================== */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  animation: fadeIn 0.2s ease;
+}
+
+.mobile-menu-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 84%;
+  max-width: 320px;
+  background: #fff;
+  z-index: 61;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s ease;
+  overflow-y: auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 800;
+  font-size: 15px;
+  color: #111827;
+  text-decoration: none;
+  min-height: 52px;
+  transition: background 0.15s ease;
+}
+
+.mobile-menu-item:active {
+  background: #fff7f5;
+}
+
+.mobile-menu-item.danger {
+  color: #dc2626;
+}
+
+/* ============================================== */
+/* RESPONSIVE BREAKPOINTS                          */
+/* ============================================== */
+
+/* Tablet */
+@media (max-width: 900px) {
+  .ui-title-xl {
+    font-size: 28px;
+  }
+
+  .site-navbar-inner {
+    padding: 12px 14px;
+  }
+
+  .page-shell {
+    padding: 18px 12px 28px;
+  }
+}
+
+/* Mobile (จอ 6.2" ราว 390-414px) */
+@media (max-width: 640px) {
+  .ui-title-xl {
+    font-size: 22px;
+  }
+
+  .ui-title-lg {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+
+  .page-shell {
+    padding: 12px 10px 24px;
+  }
+
+  .ui-hero {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .ui-btn {
+    height: 44px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  .ui-input,
+  .ui-select {
+    height: 46px;
+  }
+
+  .market-card-body {
+    padding: 12px;
+  }
+
+  /* การ์ดสินค้าให้มี radius เล็กลง ดูเหมาะกับมือถือ */
+  .market-card {
+    border-radius: 14px;
+  }
+}
+
+/* Mobile เล็ก (≤380px เช่น iPhone SE) */
+@media (max-width: 380px) {
+  .ui-title-xl {
+    font-size: 20px;
+  }
+
+  .page-shell {
+    padding: 10px 8px 20px;
+  }
+}
+
+/* ============================================== */
+/* HELPERS — class ใช้ซ่อน/แสดงตามจอ              */
+/* ============================================== */
+.hide-on-mobile {
+  /* ไว้ซ่อนบน ≤640 */
+}
+
+.show-on-mobile {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .show-on-mobile {
+    display: flex !important;
+  }
+}
+
+/* ============================================== */
+/* SAFE AREA สำหรับ iPhone notch / Android nav    */
+/* ============================================== */
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}

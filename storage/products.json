@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "name": "สารสกัดนมผึ้ง",
+    "slug": "royal-jelly",
+    "price": 92.77,
+    "image": "/uploads/products/1774251555609-bin.jpg",
+    "shortDescription": "สารสกัดนมผึ้งคุณภาพสูง",
+    "category": "health",
+    "stock": 100
+  },
+  {
+    "id": 2,
+    "name": "Chlorophyll Powder",
+    "slug": "chlorophyll",
+    "price": 35,
+    "image": "/uploads/products/1774180850338-817Do612pzL._AC_SL1500_.jpg",
+    "shortDescription": "คลอโรฟิลล์ชนิดผง",
+    "category": "health",
+    "stock": 100
+  },
+  {
+    "id": 3,
+    "name": "Reishi Mushroom Extract",
+    "slug": "reishi",
+    "price": 47.05,
+    "image": "/uploads/products/1774180904189-2022-09-18_095457.png",
+    "shortDescription": "สารสกัดเห็ดหลินจือ",
+    "category": "health",
+    "stock": 100
+  },
+  {
+    "id": 4,
+    "name": "Elderberry Fruit Powder",
+    "slug": "elderberry",
+    "price": 79.9,
+    "image": "/uploads/products/1774180882047-2kgs.jpg",
+    "shortDescription": "ผงเอลเดอร์เบอร์รี่",
+    "category": "fruit",
+    "stock": 100
+  },
+  {
+    "id": 5,
+    "name": "วอสก้า95",
+    "slug": "ของเหลว",
+    "price": 700,
+    "image": "/uploads/products/1774063037540-_cover-Dolly-Paige.jpg",
+    "shortDescription": "ใช้เป็นตัวทำละลายสุะกัดสมุนไพร",
+    "category": "สมุนไพร",
+    "stock": 5
+  },
+  {
+    "id": 6,
+    "name": "เมล็ดพันธุ์ โอบะ โอ ชิโซะญี่ปุ่น Green Ohba Ao Shiso Perilla Seed 80 เมล็ด คุณภาพดี ของแท้",
+    "slug": "ซอง",
+    "price": 48,
+    "image": "/uploads/products/1774252065876-512781307_10067947856631639_6092511528266870219_n.jpg",
+    "shortDescription": "เมล็ดพันธุ์ โอบะ โอ ชิโซะญี่ปุ่น\n\nGreen Ohba Ao Shiso Perilla (Perilla frutescens var crispa.)\n\nชิโซะญี่ปุ่น หรือใบโอบะ นิยมใช้ในร้านอาหารญี่ปุ่น\n\nซิโซะโอบะเขียวใต้ใบเขียว ขอบใบหยักลึก\n\nพันธุ์นี้นิยมกินกับอาหารญี่ปุ่น หรืออาหารทะเลสด\n\nบรรจุประมาณ:  80  เมล็ด\n\nแสงแดด: แดดจัด\n\nอายุเก็บเกี่ยว: 70 วัน\n\nอัตรางอกประมาณ: 80%\n\nคุณภาพดี ราคาถูก ของแท้ 100% ",
+    "category": "ผักสวนครัว",
+    "stock": 45
+  },
+  {
+    "id": 7,
+    "name": "ต้นพันธุ์ บอระเพ็ด สมุนไพรชั้นดี พร้อมปลูกในถุงดำ 29 บาท สมุนไพรรสขม ของดีตำรายาไทย",
+    "slug": "ต้นไม้",
+    "price": 29,
+    "image": "/uploads/products/1774269708039-2026-03-23_145810.jpg",
+    "shortDescription": "ต้นพันธุ์ บอระเพ็ด สมุนไพรชั้นดี  พร้อมปลูกในถุงดำ 29 บาท  สมุนไพรรสขม ของดีตำรายาไทย จุ้งจาลิง , จุ่งจิง , เครือเขาฮอ  เจตมูลหนาม หางหนู เถาหัวด้วน ตัวเจตมูลยาน ",
+    "category": "พืชสมุนไพร",
+    "stock": 50
+  }
+]

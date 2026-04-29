@@ -1,0 +1,226 @@
+[
+  {
+    "id": "review-1777279387804",
+    "userId": "user-1776979985826",
+    "productId": 7,
+    "productIds": [
+      7
+    ],
+    "title": "“ลองมาแล้วหลายวิธี สุดท้ายจบที่ตัวนี้ (รีวิวจากประสบการณ์จริง)”",
+    "slug": "ลองมาแล้วหลายวิธี-สุดท้ายจบที่ตัวนี้-รีวิวจากประสบการณ์จริง-1777279387804",
+    "category": "สัตว์เลี้ยง > สุนัข > ยีสต์สุนัข",
+    "creatorName": "แม่ค้าขนมไทย",
+    "customerName": "",
+    "creatorCode": "1124",
+    "reviewType": "creator_slide",
+    "slides": [
+      {
+        "key": "before",
+        "img": "/uploads/reviews/40913444_s-1777279231167.jpg",
+        "text": "หมาจรจัด"
+      },
+      {
+        "key": "problem",
+        "img": "/uploads/reviews/4f2bfda8-43cc-4289-a60e-849f776b7b92-1777279266552.png",
+        "text": "สุนัขเกา อาบน้ำยาก ป้อนยายาก"
+      },
+      {
+        "key": "step",
+        "img": "/uploads/reviews/2024-09-19_132221-1777279385490.jpg",
+        "text": "ฉีดใส่ทิชชู่เปียกแล้วลูบขน"
+      },
+      {
+        "key": "result",
+        "img": "/uploads/reviews/2024-09-19_132211-1777279333039.jpg",
+        "text": "อาการคันน้อยลว"
+      },
+      {
+        "key": "after",
+        "img": "/uploads/reviews/2024-09-19_132137-1777279352564.jpg",
+        "text": "หายแล้ว อารมณ์ดี"
+      }
+    ],
+    "productBundleName": "สเปรย์คลิปโต รักษายีสต์เชื้อรา ทั้งในแมวและสุนัข",
+    "verifiedPurchase": true,
+    "status": "published",
+    "views": 0,
+    "clicks": 0,
+    "ordersCount": 4,
+    "commissionTotal": 110,
+    "commissionRate": 0.1,
+    "commissionOwnerUserId": "user-1776979985826",
+    "reviewLink": "/product/crypto-spray",
+    "createdAt": "2026-04-27T08:43:07.804Z",
+    "updatedAt": "2026-04-29T09:00:07.583Z",
+    "orderId": "ORD-1777035883471",
+    "rating": 0
+  },
+  {
+    "id": "review-1777243112004",
+    "userId": "user-1774102513149",
+    "productId": 1,
+    "productIds": [
+      1
+    ],
+    "title": "“สรุปให้เลย วิธีดูแลแบบนี้ เห็นผลจริงหรือแค่คิดไปเอง?”",
+    "slug": "สรุปให้เลย-วิธีดูแลแบบนี้-เห็นผลจริงหรือแค่คิดไปเอง-1777243112005",
+    "category": "สัตว์เลี้ยง > แมว > FIP",
+    "creatorName": "สมหวังนะครับ",
+    "customerName": "",
+    "creatorCode": "1133",
+    "reviewType": "creator_slide",
+    "slides": [
+      {
+        "key": "before",
+        "img": "/uploads/reviews/2019-01-16_064510-1777242970271.jpg",
+        "text": "ผิวแดงๆ คัน"
+      },
+      {
+        "key": "problem",
+        "img": "/uploads/reviews/2020-01-07_062951-sai-sharpen-1777242988651.jpg",
+        "text": "ขนร่าง ส่งสาร"
+      },
+      {
+        "key": "step",
+        "img": "/uploads/reviews/158522-1777243010298.jpg",
+        "text": "กินวันละ2ครั้งเช้า เย็น"
+      },
+      {
+        "key": "result",
+        "img": "/uploads/reviews/fuppmfmusaavmmi-1777243062169.jfif",
+        "text": "เกาน้อยลงมาก"
+      },
+      {
+        "key": "after",
+        "img": "/uploads/reviews/taiblack-1777243108393.jpg",
+        "text": "ขนขิ้น หายคัน"
+      }
+    ],
+    "productBundleName": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+    "verifiedPurchase": true,
+    "status": "published",
+    "views": 0,
+    "clicks": 0,
+    "ordersCount": 8,
+    "commissionTotal": 429,
+    "commissionRate": 0.1,
+    "commissionOwnerUserId": "user-1774102513149",
+    "reviewLink": "/product/fip-care-andrographis",
+    "createdAt": "2026-04-26T22:38:32.004Z",
+    "updatedAt": "2026-04-29T14:52:38.080Z",
+    "orderId": "ORD-1777076961881",
+    "rating": 0
+  },
+  {
+    "id": "review-1776980575442",
+    "userId": "user-1776979985826",
+    "creatorCode": "1124",
+    "commissionOwnerUserId": "user-1776979985826",
+    "productId": 5,
+    "productIds": [
+      5
+    ],
+    "title": "“จากคันไม่หยุด เป็นผิวเรียบใน 7 วัน – วิธีที่ผมใช้จริง”",
+    "slug": "จากคันไม่หยุด-เป็นผิวเรียบใน-7-วัน-วิธีที่ผมใช้จริง-1776980575442",
+    "category": "สัตว์เลี้ยง > สุนัข > ยีสต์สุนัข",
+    "creatorName": "แม่ค้าขนมไทย",
+    "customerName": "",
+    "reviewType": "creator_slide",
+    "slides": [
+      {
+        "key": "before",
+        "img": "/uploads/reviews/before-1776980407734.jpg",
+        "text": "ชอบเล่นน้ำแช่น้ำ"
+      },
+      {
+        "key": "problem",
+        "img": "/uploads/reviews/2024-08-31_061505-1776980444174.jpg",
+        "text": "แผลเกา อักเสบ"
+      },
+      {
+        "key": "step",
+        "img": "/uploads/reviews/adv2-1776980475190.jpg",
+        "text": "อาบง่าย ก็เลยเป็นข้อดี"
+      },
+      {
+        "key": "result",
+        "img": "/uploads/reviews/after-1776980511383.jpg",
+        "text": "ดีขึ้นเรื่อยๆ"
+      },
+      {
+        "key": "after",
+        "img": "/uploads/reviews/d85_13941-1776980528933.jpg",
+        "text": "อารมณ์ดีไม่คัน"
+      }
+    ],
+    "productBundleName": "ผงก้านพูรักษายีสต์ผิวสุนัข(ซองใหญ่)",
+    "verifiedPurchase": true,
+    "status": "published",
+    "views": 0,
+    "clicks": 0,
+    "ordersCount": 2,
+    "commissionTotal": 180,
+    "commissionRate": 0.1,
+    "reviewLink": "/product/dog-yeast-powder-large",
+    "createdAt": "2026-04-23T21:42:55.442Z",
+    "updatedAt": "2026-04-27T08:34:55.559Z",
+    "orderId": "ORD-1775109269070",
+    "rating": 0
+  },
+  {
+    "id": "review-1776948486287",
+    "userId": "user-1774102513149",
+    "productId": 1,
+    "productIds": [
+      1
+    ],
+    "title": "“สรุปให้เลย วิธีดูแลแบบนี้ เห็นผลจริงหรือแค่คิดไปเอง?”",
+    "slug": "ใครเป็นแบบนี้อยู่บ้าง-ผมเคยเป็นหนักกว่านี้-ก่อนจะเจอวิธีนี้-1776948486287",
+    "category": "สัตว์เลี้ยง > แมว > FIP",
+    "creatorName": "สมหวังนะครับ",
+    "customerName": "",
+    "reviewType": "creator_slide",
+    "slides": [
+      {
+        "key": "before",
+        "img": "/uploads/reviews/istock-1429886366-1776948274438.jpg",
+        "text": "เดินเซ เซื่องซึม"
+      },
+      {
+        "key": "problem",
+        "img": "/uploads/reviews/fip-cat-1776948308466.jpg",
+        "text": "ท้องบวม ทานแล้วเริ่มยุบ"
+      },
+      {
+        "key": "step",
+        "img": "/uploads/reviews/botle-removebg-preview-1776948339881.png",
+        "text": "ทานทุกๆ 12 ชม."
+      },
+      {
+        "key": "result",
+        "img": "/uploads/reviews/467405182-1776985293683.jpg",
+        "text": "ท้องยุบลงเรื่อยๆ"
+      },
+      {
+        "key": "after",
+        "img": "/uploads/reviews/fip-body-1776985303349.jpg",
+        "text": "ปรึกษาทางแชทได้"
+      }
+    ],
+    "productBundleName": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+    "verifiedPurchase": true,
+    "status": "published",
+    "views": 0,
+    "clicks": 0,
+    "ordersCount": 6,
+    "commissionTotal": 273,
+    "commissionRate": 0.1,
+    "commissionOwnerUserId": "user-1774102513149",
+    "reviewLink": "/product/fip-care-andrographis",
+    "createdAt": "2026-04-23T12:48:06.287Z",
+    "updatedAt": "2026-04-29T09:00:07.583Z",
+    "orderId": "ORD-1776932926879",
+    "rating": 0,
+    "creatorCode": "1133"
+  }
+]
