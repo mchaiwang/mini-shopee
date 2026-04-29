@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
   const isMobile = useIsMobile(820); // ซ่อน promo เร็วหน่อยเพราะ panel แนวนอนต้องการพื้นที่
@@ -410,3 +410,10 @@ const featureDot: React.CSSProperties = {
   fontWeight: 900,
   flexShrink: 0,
 };
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
