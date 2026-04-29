@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
@@ -60,7 +60,7 @@ type CurrentUser = {
   };
 };
 
-export default function OrdersPage() {
+function OrdersPageInner() {
   const searchParams = useSearchParams();
   const isMobile = useIsMobile(640);
 
@@ -912,6 +912,13 @@ export default function OrdersPage() {
       ) : null}
 
     </div>
+  );
+}
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>
+      <OrdersPageInner />
+    </Suspense>
   );
 }
 
