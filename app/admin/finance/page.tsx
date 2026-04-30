@@ -560,14 +560,14 @@ const passDateTo = dateTo
   }
 
   if (loading) {
-    return <div style={page}>กำลังโหลด Shopee Affiliate Dashboard...</div>;
+    return <div style={page}>กำลังโหลด Affiliate Dashboard...</div>;
   }
 
   return (
     <div style={page}>
       <div style={topbar}>
         <div>
-          <h1 style={title}>Shopee Affiliate Dashboard</h1>
+          <h1 style={title}>Affiliate Dashboard</h1>
           <p style={sub}>คอมมิชชั่นแยกตามรีวิว / Top creator / Orders from review / Conversion</p>
           {admin ? <p style={muted}>Admin: {admin.name || admin.email}</p> : null}
         </div>
@@ -575,7 +575,7 @@ const passDateTo = dateTo
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button onClick={loadData} style={softBtn}>รีเฟรช</button>
           <Link href="/admin" style={softBtn}>กลับ Dashboard</Link>
-          <Link href="/" style={darkBtn}>หน้าร้าน</Link>
+        
         </div>
       </div>
 

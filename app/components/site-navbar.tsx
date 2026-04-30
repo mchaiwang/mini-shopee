@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 type CurrentUser = {
@@ -14,53 +14,59 @@ type CurrentUser = {
   creatorStatus?: string;
 };
 
+const ORANGE = "#ee4d2d";
+
 const navButtonBaseStyle: React.CSSProperties = {
   textDecoration: "none",
   height: "42px",
   padding: "0 16px",
-  borderRadius: "4px",
+  borderRadius: "10px",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   gap: "7px",
   fontSize: "14px",
-  fontWeight: 800,
+  fontWeight: 900,
   whiteSpace: "nowrap",
   transition: "all 0.18s ease",
-};
-
-const shopeePrimaryButtonStyle: React.CSSProperties = {
-  ...navButtonBaseStyle,
-  background: "#ee4d2d",
+  border: `1px solid ${ORANGE}`,
+  background: ORANGE,
   color: "#fff",
-  border: "1px solid #ee4d2d",
   boxShadow: "0 4px 10px rgba(238,77,45,0.18)",
 };
 
-const shopeeOutlineButtonStyle: React.CSSProperties = {
-  ...navButtonBaseStyle,
+const activeButtonStyle: React.CSSProperties = {
   background: "#fff",
-  color: "#ee4d2d",
-  border: "1px solid #ee4d2d",
-  boxShadow: "0 2px 8px rgba(238,77,45,0.08)",
+  color: ORANGE,
+  border: `2px solid ${ORANGE}`,
+  boxShadow:
+    "0 0 0 3px rgba(238,77,45,0.18), 0 8px 18px rgba(238,77,45,0.18)",
+  transform: "translateY(-1px)",
 };
 
-const shopeeSoftButtonStyle: React.CSSProperties = {
+const navPanelButtonStyle: React.CSSProperties = {
   ...navButtonBaseStyle,
-  background: "#fff7f5",
-  color: "#ee4d2d",
-  border: "1px solid #ffd0c5",
-  boxShadow: "0 2px 8px rgba(238,77,45,0.08)",
 };
 
 export default function SiteNavbar() {
-  const router = useRouter();
-  const isMobile = useIsMobile(720); // navbar collapse ที่จอ ≤720px (เผื่อ tablet เล็ก)
+  const pathname = usePathname();
+  const isMobile = useIsMobile(720);
+
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [chatBadgeBlink, setChatBadgeBlink] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isActive = (path: string) => {
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
+
+  const getNavStyle = (active: boolean): React.CSSProperties => ({
+    ...navPanelButtonStyle,
+    ...(active ? activeButtonStyle : {}),
+  });
 
   const loadUser = async () => {
     try {
@@ -84,10 +90,15 @@ export default function SiteNavbar() {
   };
 
   const getReadKey = (roomId: string, role?: string) => {
-    return role === "admin" ? `admin_chat_read_${roomId}` : `chat_read_${roomId}`;
+    return role === "admin"
+      ? `admin_chat_read_${roomId}`
+      : `chat_read_${roomId}`;
   };
 
-  const countUnreadMessages = (rooms: any[], currentUser: CurrentUser | null) => {
+  const countUnreadMessages = (
+    rooms: any[],
+    currentUser: CurrentUser | null
+  ) => {
     if (!currentUser || !Array.isArray(rooms)) return 0;
 
     const oppositeSender = currentUser.role === "admin" ? "customer" : "admin";
@@ -190,18 +201,13 @@ export default function SiteNavbar() {
     return () => window.clearInterval(timer);
   }, []);
 
-  // ปิด menu เมื่อเปลี่ยนจาก mobile -> desktop
   useEffect(() => {
     if (!isMobile) setMenuOpen(false);
   }, [isMobile]);
 
-  // lock scroll body เมื่อเปิด menu
   useEffect(() => {
-    if (menuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+
     return () => {
       document.body.style.overflow = "";
     };
@@ -225,36 +231,21 @@ export default function SiteNavbar() {
     return user?.creatorEnabled === true || user?.creatorStatus === "approved";
   }, [user]);
 
-  // ปุ่มแชทพร้อม badge — แยกออกมาเพราะใช้ทั้ง desktop + mobile
   const ChatLink = ({ inMenu = false }: { inMenu?: boolean }) => {
     const href = user?.role === "admin" ? "/admin/inquiries" : "/my-chats";
+    const active = isActive("/my-chats") || isActive("/admin/inquiries");
 
     if (inMenu) {
       return (
         <Link
           href={href}
-          className="mobile-menu-item"
+          className={`mobile-menu-item ${active ? "active" : ""}`}
           onClick={() => setMenuOpen(false)}
         >
           <span style={{ fontSize: 20 }}>💬</span>
           <span style={{ flex: 1 }}>ห้องแชท</span>
           {chatUnreadCount > 0 ? (
-            <span
-              style={{
-                minWidth: 22,
-                height: 22,
-                padding: "0 7px",
-                borderRadius: 999,
-                background: "#ff1744",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 900,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                lineHeight: 1,
-              }}
-            >
+            <span className="chat-count-badge">
               {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
             </span>
           ) : null}
@@ -266,7 +257,7 @@ export default function SiteNavbar() {
       <Link
         href={href}
         style={{
-          ...shopeePrimaryButtonStyle,
+          ...getNavStyle(active),
           position: "relative",
           overflow: "visible",
         }}
@@ -310,8 +301,7 @@ export default function SiteNavbar() {
     <header
       style={{
         width: "100%",
-        background:
-          "linear-gradient(135deg, #ee4d2d 0%, #ff6633 55%, #ff8b61 100%)",
+        background: "linear-gradient(135deg, #ee4d2d 0%, #f25a3a 100%)",
         boxShadow: "0 8px 20px rgba(238,77,45,0.18)",
         position: "sticky",
         top: 0,
@@ -332,6 +322,8 @@ export default function SiteNavbar() {
       >
         <Link
           href="/"
+          title="กลับหน้าแรก"
+          aria-label="จำรัสฟาร์ม กลับหน้าแรก"
           style={{
             display: "flex",
             alignItems: "center",
@@ -342,43 +334,72 @@ export default function SiteNavbar() {
             fontSize: isMobile ? "17px" : "20px",
             minWidth: 0,
             flex: isMobile ? "1 1 auto" : "none",
+            padding: "7px 10px",
+            borderRadius: "16px",
+            background: isActive("/")
+              ? "rgba(255,255,255,0.22)"
+              : "rgba(255,255,255,0.10)",
+            border: isActive("/")
+              ? "2px solid rgba(255,255,255,0.85)"
+              : "1px solid rgba(255,255,255,0.35)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.35), 0 9px 18px rgba(130,35,15,0.25), 0 2px 0 rgba(120,35,15,0.35)",
+            transform: isActive("/") ? "translateY(-1px)" : "translateY(0)",
           }}
         >
           <div
             style={{
-              width: isMobile ? 36 : 42,
-              height: isMobile ? 36 : 42,
-              borderRadius: 10,
+              width: isMobile ? 38 : 44,
+              height: isMobile ? 38 : 44,
+              borderRadius: 12,
               background: "#fff",
-              color: "#ee4d2d",
+              color: ORANGE,
               display: "grid",
               placeItems: "center",
-              fontSize: isMobile ? 18 : 21,
+              fontSize: isMobile ? 19 : 22,
               fontWeight: 900,
-              boxShadow: "0 6px 14px rgba(0,0,0,0.08)",
+              boxShadow:
+                "inset 0 2px 0 rgba(255,255,255,0.9), 0 8px 14px rgba(0,0,0,0.16), 0 3px 0 rgba(150,45,20,0.25)",
               flexShrink: 0,
             }}
           >
             🌿
           </div>
+
           <span
             style={{
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              textShadow: "0 2px 4px rgba(0,0,0,0.22)",
             }}
           >
             จำรัสฟาร์ม
           </span>
+
+          {!isMobile ? (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 900,
+                background: "#fff",
+                color: ORANGE,
+                borderRadius: 999,
+                padding: "4px 8px",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
+              }}
+            >
+              หน้าแรก
+            </span>
+          ) : null}
         </Link>
 
-        {/* ===== MOBILE: hamburger button ===== */}
         {isMobile ? (
           loading ? (
             <div
               style={{
                 padding: "8px 12px",
-                borderRadius: 8,
+                borderRadius: 10,
                 background: "rgba(255,255,255,0.18)",
                 color: "#fff",
                 fontWeight: 800,
@@ -391,8 +412,9 @@ export default function SiteNavbar() {
             <Link
               href="/login"
               style={{
-                ...shopeeOutlineButtonStyle,
+                ...getNavStyle(isActive("/login")),
                 background: "#fff",
+                color: ORANGE,
                 height: 40,
                 padding: "0 14px",
                 fontSize: 13,
@@ -402,8 +424,14 @@ export default function SiteNavbar() {
               เข้าสู่ระบบ
             </Link>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              {/* ปุ่มแชทแสดงเด่นบน mobile (มี badge ดูง่าย) */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexShrink: 0,
+              }}
+            >
               <Link
                 href={user.role === "admin" ? "/admin/inquiries" : "/my-chats"}
                 aria-label="ห้องแชท"
@@ -411,13 +439,27 @@ export default function SiteNavbar() {
                   position: "relative",
                   width: 42,
                   height: 42,
-                  borderRadius: 10,
-                  background: "#fff",
-                  color: "#ee4d2d",
+                  borderRadius: 12,
+                  background:
+                    isActive("/my-chats") || isActive("/admin/inquiries")
+                      ? "#fff"
+                      : ORANGE,
+                  color:
+                    isActive("/my-chats") || isActive("/admin/inquiries")
+                      ? ORANGE
+                      : "#fff",
+                  border:
+                    isActive("/my-chats") || isActive("/admin/inquiries")
+                      ? `2px solid ${ORANGE}`
+                      : "2px solid #fff",
                   display: "grid",
                   placeItems: "center",
                   fontSize: 20,
                   flexShrink: 0,
+                  boxShadow:
+                    isActive("/my-chats") || isActive("/admin/inquiries")
+                      ? "0 0 0 3px rgba(255,255,255,0.5), 0 8px 16px rgba(0,0,0,0.12)"
+                      : "0 4px 10px rgba(0,0,0,0.08)",
                 }}
               >
                 💬
@@ -453,10 +495,10 @@ export default function SiteNavbar() {
                 style={{
                   width: 42,
                   height: 42,
-                  borderRadius: 10,
+                  borderRadius: 12,
                   background: "#fff",
-                  color: "#ee4d2d",
-                  border: "none",
+                  color: ORANGE,
+                  border: "2px solid rgba(255,255,255,0.85)",
                   display: "grid",
                   placeItems: "center",
                   cursor: "pointer",
@@ -469,13 +511,12 @@ export default function SiteNavbar() {
               </button>
             </div>
           )
-        ) : /* ===== DESKTOP ===== */
-        loading ? (
+        ) : loading ? (
           <div
             style={{
               minWidth: "240px",
               padding: "12px 20px",
-              borderRadius: "4px",
+              borderRadius: 10,
               background: "rgba(255,255,255,0.18)",
               color: "#fff",
               textAlign: "center",
@@ -485,14 +526,7 @@ export default function SiteNavbar() {
             กำลังโหลด...
           </div>
         ) : !user ? (
-          <Link
-            href="/login"
-            style={{
-              ...shopeeOutlineButtonStyle,
-              background: "#fff",
-              minHeight: 44,
-            }}
-          >
+          <Link href="/login" style={getNavStyle(isActive("/login"))}>
             เข้าสู่ระบบ / สมัครสมาชิก
           </Link>
         ) : (
@@ -502,7 +536,7 @@ export default function SiteNavbar() {
               alignItems: "center",
               gap: "8px",
               padding: "8px 10px",
-              borderRadius: "10px",
+              borderRadius: "14px",
               background: "#fff",
               boxShadow: "0 8px 18px rgba(0,0,0,0.10)",
               flexWrap: "wrap",
@@ -515,9 +549,9 @@ export default function SiteNavbar() {
                 alignItems: "center",
                 height: "42px",
                 padding: "0 14px",
-                borderRadius: "4px",
-                background: "#fff7f5",
-                border: "1px solid #ffd7cf",
+                borderRadius: "10px",
+                background: "rgba(238,77,45,0.08)",
+                border: "1px solid rgba(238,77,45,0.22)",
                 color: "#111827",
                 fontWeight: 900,
                 fontSize: "14px",
@@ -527,7 +561,7 @@ export default function SiteNavbar() {
               👋 {user.name}
             </div>
 
-            <Link href="/orders" style={shopeePrimaryButtonStyle}>
+            <Link href="/orders" style={getNavStyle(isActive("/orders"))}>
               <span>📦</span>
               <span>การซื้อของฉัน</span>
             </Link>
@@ -536,29 +570,36 @@ export default function SiteNavbar() {
 
             <Link
               href="/account/finance"
-              style={
-                isCreatorApproved
-                  ? shopeeOutlineButtonStyle
-                  : shopeeSoftButtonStyle
-              }
+              style={getNavStyle(isActive("/account/finance"))}
             >
               <span>🪙</span>
-              <span>ครีเอเตอร์/การเงิน</span>
+              <span>ครีเอเตอร์</span>
+              {isCreatorApproved ? (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 900,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: isActive("/account/finance")
+                      ? "rgba(238,77,45,0.12)"
+                      : "rgba(255,255,255,0.22)",
+                    color: isActive("/account/finance") ? ORANGE : "#fff",
+                  }}
+                >
+                  อนุมัติ
+                </span>
+              ) : null}
             </Link>
 
             {user.role === "admin" && (
-              <Link
-                href="/admin"
-                style={{
-                  ...shopeePrimaryButtonStyle,
-                  background: "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)",
-                }}
-              >
-                หลังบ้าน
+              <Link href="/admin" style={getNavStyle(isActive("/admin"))}>
+                <span>⚙️</span>
+                <span>หลังบ้าน</span>
               </Link>
             )}
 
-            <Link href="/profile" style={shopeeSoftButtonStyle}>
+            <Link href="/profile" style={getNavStyle(isActive("/profile"))}>
               <span>👤</span>
               <span>บัญชีของฉัน</span>
             </Link>
@@ -566,17 +607,11 @@ export default function SiteNavbar() {
             <button
               onClick={handleLogout}
               style={{
-                height: "42px",
-                padding: "0 16px",
-                borderRadius: 4,
-                border: "1px solid #ef4444",
-                background: "#ef4444",
+                ...navButtonBaseStyle,
+                background: ORANGE,
+                border: `1px solid ${ORANGE}`,
                 color: "#fff",
-                fontWeight: 900,
-                fontSize: "14px",
                 cursor: "pointer",
-                boxShadow: "0 4px 10px rgba(239,68,68,0.16)",
-                whiteSpace: "nowrap",
               }}
             >
               ออกจากระบบ
@@ -585,15 +620,14 @@ export default function SiteNavbar() {
         )}
       </div>
 
-      {/* ===== MOBILE MENU OVERLAY ===== */}
       {isMobile && menuOpen && user ? (
         <>
           <div
             className="mobile-menu-overlay"
             onClick={() => setMenuOpen(false)}
           />
+
           <nav className="mobile-menu-panel" aria-label="เมนูหลัก">
-            {/* header ของ panel */}
             <div
               style={{
                 padding: "16px 18px",
@@ -602,14 +636,13 @@ export default function SiteNavbar() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 12,
-                background:
-                  "linear-gradient(135deg, #ee4d2d 0%, #ff6633 55%, #ff8b61 100%)",
+                background: "linear-gradient(135deg, #ee4d2d 0%, #f25a3a 100%)",
                 color: "#fff",
               }}
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 12, opacity: 0.9, fontWeight: 700 }}>
-                  สวัสดีครับ
+                  เมนูผู้ใช้งาน
                 </div>
                 <div
                   style={{
@@ -623,13 +656,14 @@ export default function SiteNavbar() {
                   👋 {user.name}
                 </div>
               </div>
+
               <button
                 onClick={() => setMenuOpen(false)}
                 aria-label="ปิดเมนู"
                 style={{
                   width: 36,
                   height: 36,
-                  borderRadius: 8,
+                  borderRadius: 10,
                   border: "none",
                   background: "rgba(255,255,255,0.22)",
                   color: "#fff",
@@ -643,8 +677,19 @@ export default function SiteNavbar() {
             </div>
 
             <Link
+              href="/"
+              className={`mobile-menu-item ${isActive("/") ? "active" : ""}`}
+              onClick={() => setMenuOpen(false)}
+            >
+              <span style={{ fontSize: 20 }}>🌿</span>
+              <span>จำรัสฟาร์ม / กลับหน้าแรก</span>
+            </Link>
+
+            <Link
               href="/orders"
-              className="mobile-menu-item"
+              className={`mobile-menu-item ${
+                isActive("/orders") ? "active" : ""
+              }`}
               onClick={() => setMenuOpen(false)}
             >
               <span style={{ fontSize: 20 }}>📦</span>
@@ -655,34 +700,25 @@ export default function SiteNavbar() {
 
             <Link
               href="/account/finance"
-              className="mobile-menu-item"
+              className={`mobile-menu-item ${
+                isActive("/account/finance") ? "active" : ""
+              }`}
               onClick={() => setMenuOpen(false)}
             >
               <span style={{ fontSize: 20 }}>🪙</span>
               <span>
-                ครีเอเตอร์/การเงิน
+                ครีเอเตอร์
                 {isCreatorApproved ? (
-                  <span
-                    style={{
-                      marginLeft: 8,
-                      fontSize: 11,
-                      color: "#027a48",
-                      background: "#ecfdf3",
-                      border: "1px solid #a6f4c5",
-                      padding: "2px 6px",
-                      borderRadius: 999,
-                      fontWeight: 800,
-                    }}
-                  >
-                    อนุมัติแล้ว
-                  </span>
+                  <span className="creator-approved-badge">อนุมัติแล้ว</span>
                 ) : null}
               </span>
             </Link>
 
             <Link
               href="/profile"
-              className="mobile-menu-item"
+              className={`mobile-menu-item ${
+                isActive("/profile") ? "active" : ""
+              }`}
               onClick={() => setMenuOpen(false)}
             >
               <span style={{ fontSize: 20 }}>👤</span>
@@ -692,9 +728,10 @@ export default function SiteNavbar() {
             {user.role === "admin" && (
               <Link
                 href="/admin"
-                className="mobile-menu-item"
+                className={`mobile-menu-item ${
+                  isActive("/admin") ? "active" : ""
+                }`}
                 onClick={() => setMenuOpen(false)}
-                style={{ color: "#ee4d2d", fontWeight: 900 }}
               >
                 <span style={{ fontSize: 20 }}>⚙️</span>
                 <span>หลังบ้าน</span>
@@ -722,6 +759,86 @@ export default function SiteNavbar() {
           </nav>
         </>
       ) : null}
+
+      <style jsx global>{`
+        .mobile-menu-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.48);
+          z-index: 9998;
+        }
+
+        .mobile-menu-panel {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: min(88vw, 360px);
+          height: 100vh;
+          background: #fff;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          box-shadow: -18px 0 50px rgba(15, 23, 42, 0.2);
+          animation: slideMenuIn 0.18s ease;
+        }
+
+        @keyframes slideMenuIn {
+          from {
+            transform: translateX(100%);
+          }
+          to {
+            transform: translateX(0);
+          }
+        }
+
+        .mobile-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 15px 18px;
+          color: #0f172a;
+          text-decoration: none;
+          font-weight: 900;
+          border-bottom: 1px solid #f1f5f9;
+          position: relative;
+        }
+
+        .mobile-menu-item.active {
+          color: #ee4d2d;
+          background: #fff7f5;
+          box-shadow: inset 5px 0 0 #ee4d2d;
+        }
+
+        .mobile-menu-item.danger {
+          color: #ee4d2d;
+        }
+
+        .chat-count-badge {
+          min-width: 22px;
+          height: 22px;
+          padding: 0 7px;
+          border-radius: 999px;
+          background: #ff1744;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 900;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+        }
+
+        .creator-approved-badge {
+          margin-left: 8px;
+          font-size: 11px;
+          color: #027a48;
+          background: #ecfdf3;
+          border: 1px solid #a6f4c5;
+          padding: 2px 6px;
+          border-radius: 999px;
+          font-weight: 900;
+        }
+      `}</style>
     </header>
   );
 }

@@ -179,24 +179,7 @@ function money(n:number){
 }
   return (
     <div style={page}>
-      <div style={hero}>
-        <div>
-          <div style={eyebrow}>ADMIN CONTROL CENTER</div>
-          <h1 style={title}>Admin Dashboard</h1>
-          <p style={subtitle}>
-            บริหารสินค้า ออเดอร์ รีวิว ครีเอเตอร์ และการเงินคอมมิชชั่นในที่เดียว
-          </p>
-        </div>
-
-        <div style={heroActions}>
-          <Link href="/admin/finance" style={primaryButton}>
-            💸 ไปหน้าการเงิน
-          </Link>
-          <Link href="/" style={ghostButton}>
-            กลับหน้าร้าน
-          </Link>
-        </div>
-      </div>
+ 
 
      <div style={salesTodayPanel}>
    <div>

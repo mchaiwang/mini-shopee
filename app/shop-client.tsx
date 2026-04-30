@@ -1227,7 +1227,7 @@ searchText: [
                   letterSpacing: "-0.02em",
                 }}
               >
-                HERBAL STORE
+                รักษาแบบทางเลือก
               </h1>
               <div
                 style={{
@@ -1237,7 +1237,7 @@ searchText: [
                   lineHeight: 1.4,
                 }}
               >
-                ดูรีวิวจริงก่อน แล้วค่อยเลือกสินค้าที่ใช้ในเคส
+                พิสูจน์รีวิวจากผู้ใช้จริง
               </div>
             </div>
 
