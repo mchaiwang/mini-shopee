@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type OrderItem = {
   id?: string | number;
   name?: string;
@@ -51,13 +54,9 @@ type Order = {
   shippingAddress: ShippingAddress;
   refReview?: string;
   commissionTracked?: boolean;
-
-  // ✅ field ใหม่
   commissionAmount?: number;
   commissionOwnerUserId?: string;
   commissionStatus?: "pending" | "requested" | "paid" | "cancelled" | "";
-
-  /** timestamp ที่ admin กดปุ่ม "ลูกค้าได้รับของแล้ว" */
   deliveredAt?: string;
 };
 
@@ -101,8 +100,6 @@ type ReviewRecord = {
   commissionOwnerUserId?: string;
   reviewType?: string;
   updatedAt?: string;
-
-  // ✅ เพิ่มบรรทัดนี้
   creatorCode?: string;
 };
 
@@ -131,14 +128,14 @@ const reviewsFile = path.join(process.cwd(), "data", "reviews.json");
 const commissionsFile = path.join(process.cwd(), "data", "commissions.json");
 
 function ensureJsonFile(filePath: string, fallback: unknown) {
-  const dir = path.dirname(filePath);
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), "utf8");
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), "utf8");
+    }
+  } catch {
+    // Vercel read-only filesystem — ignore
   }
 }
 
@@ -154,8 +151,12 @@ function readJsonFile<T>(filePath: string, fallback: T): T {
 }
 
 function writeJsonFile(filePath: string, data: unknown) {
-  ensureJsonFile(filePath, []);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  try {
+    ensureJsonFile(filePath, []);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function readOrders(): Order[] {
@@ -188,9 +189,7 @@ function getUserFromAuthCookie(cookieHeader: string): AuthUser | null {
       .split("; ")
       .find((row) => row.startsWith("auth="));
 
-    if (!authCookie) {
-      return null;
-    }
+    if (!authCookie) return null;
 
     const encoded = authCookie.split("=")[1] || "";
     const decoded = decodeURIComponent(encoded);
@@ -198,17 +197,6 @@ function getUserFromAuthCookie(cookieHeader: string): AuthUser | null {
   } catch {
     return null;
   }
-}
-
-function getNumericOrderItemProductId(items: OrderItem[] = []) {
-  for (const item of items) {
-    const rawId = String(item?.id ?? "").trim();
-    const numericId = Number(rawId);
-    if (!Number.isNaN(numericId) && numericId > 0) {
-      return numericId;
-    }
-  }
-  return null;
 }
 
 function getEffectiveRefReview(order: Order) {
@@ -220,21 +208,16 @@ function getEffectiveRefReview(order: Order) {
     if (itemRef) return itemRef;
   }
 
-  // 🔥 NEW: รองรับ creatorCode (เช่น 1124)
   const possibleCode =
     String(order.note || "").trim() ||
     String(order.fullName || "").trim();
 
   if (possibleCode) {
     const reviews = readReviews();
-
     const matched = reviews.find((r) => {
       return String(r.creatorCode || "").trim() === possibleCode;
     });
-
-    if (matched) {
-      return matched.id; // 👉 map code → review.id
-    }
+    if (matched) return matched.id;
   }
 
   return "";
@@ -242,73 +225,21 @@ function getEffectiveRefReview(order: Order) {
 
 function isEligibleOrderStatusForCommission(status?: string) {
   const normalized = String(status || "").trim();
-  // ✅ Commission จะ track ก็ต่อเมื่อลูกค้าได้รับสินค้าแล้วเท่านั้น
-  // (ป้องกันการจ่ายคอมก่อนลูกค้ายืนยันรับของ — กรณีคืนของ/ยกเลิก)
   return (
     normalized === "ได้รับสินค้าแล้ว" ||
     normalized === "สำเร็จแล้ว"
   );
 }
 
-function orderContainsReviewProduct(order: Order, review: ReviewRecord) {
-  const reviewProductIds = new Set<number>();
-
-  if (typeof review.productId === "number" && review.productId > 0) {
-    reviewProductIds.add(review.productId);
-  }
-
-  if (Array.isArray(review.productIds)) {
-    for (const id of review.productIds) {
-      const numericId = Number(id);
-      if (!Number.isNaN(numericId) && numericId > 0) {
-        reviewProductIds.add(numericId);
-      }
-    }
-  }
-
-  if (reviewProductIds.size === 0) {
-    return true;
-  }
-
-  return (order.items || []).some((item) => {
-    const numericId = Number(item?.id);
-    return !Number.isNaN(numericId) && reviewProductIds.has(numericId);
-  });
-}
-
 function createCommissionIfNeeded(order: Order) {
   const effectiveRefReview = getEffectiveRefReview(order);
-
-  if (!effectiveRefReview || order.commissionTracked) {
-    return;
-  }
-
-  if (!isEligibleOrderStatusForCommission(order.status)) {
-    return;
-  }
-
-  // delegate ให้ฟังก์ชันใหม่ที่รองรับ multi-creator
+  if (!effectiveRefReview || order.commissionTracked) return;
+  if (!isEligibleOrderStatusForCommission(order.status)) return;
   createCommissionsForAllItems(order);
 }
 
-/**
- * สร้าง commission records สำหรับ "ทุก item" ที่มี refReview ของตัวเอง
- * รองรับกรณี order เดียวมี items ของหลาย creators
- *
- * เรียกเมื่อ:
- * 1. status เปลี่ยนเป็น "ได้รับสินค้าแล้ว" / "สำเร็จแล้ว"
- * 2. backfill GET /orders
- *
- * Skip item ที่:
- * - ไม่มี refReview
- * - หา review ไม่เจอ
- * - review.status !== "published"
- * - มี commission record อยู่แล้ว (orderId + reviewId + productId)
- */
 function createCommissionsForAllItems(order: Order) {
-  if (!isEligibleOrderStatusForCommission(order.status)) {
-    return;
-  }
+  if (!isEligibleOrderStatusForCommission(order.status)) return;
 
   const reviews = readReviews();
   const commissions = readCommissions();
@@ -327,35 +258,28 @@ function createCommissionsForAllItems(order: Order) {
     if (reviewIndex === -1) continue;
 
     const review = reviews[reviewIndex];
-
     if (review.status && review.status !== "published") continue;
 
     const reviewType = String(review.reviewType || "").trim();
-    if (reviewType && !["creator_video", "creator_slide"].includes(reviewType)) {
-      continue;
-    }
+    if (reviewType && !["creator_video", "creator_slide"].includes(reviewType)) continue;
 
     const ownerUserId = String(
       review.commissionOwnerUserId || review.userId || ""
     ).trim();
-
     if (!ownerUserId) continue;
 
     const productId = Number(item.id || (item as any).productId || 0);
 
-    // เช็คว่ามี commission record อยู่แล้วไหม (orderId + reviewId + productId)
     const alreadyExists = commissions.some(
       (c) =>
         String(c.orderId) === String(order.id) &&
         String(c.reviewId) === String(review.id) &&
         Number(c.productId) === productId
     );
-
     if (alreadyExists) continue;
 
     const qty = Number(item.qty || (item as any).quantity || 1);
     const saleAmount = Number(item.price || 0) * qty;
-
     if (saleAmount <= 0) continue;
 
     const commissionRate =
@@ -364,7 +288,6 @@ function createCommissionsForAllItems(order: Order) {
         : 0.1;
 
     const commissionAmount = Number((saleAmount * commissionRate).toFixed(2));
-
     if (commissionAmount <= 0) continue;
 
     const newCommission: CommissionRecord = {
@@ -382,7 +305,6 @@ function createCommissionsForAllItems(order: Order) {
 
     commissions.unshift(newCommission);
 
-    // อัพเดท review stats
     reviews[reviewIndex] = {
       ...review,
       commissionOwnerUserId: ownerUserId,
@@ -402,7 +324,6 @@ function createCommissionsForAllItems(order: Order) {
     writeCommissions(commissions);
     writeReviews(reviews);
 
-    // อัพเดท order — ใช้ owner ของ item แรกเป็น default (เพื่อ backward compat กับ admin/finance)
     const orders = readOrders();
     const orderIndex = orders.findIndex((o) => String(o.id) === String(order.id));
     if (orderIndex !== -1) {
@@ -419,13 +340,10 @@ function createCommissionsForAllItems(order: Order) {
   }
 }
 
-
-// ================= GET =================
 export async function GET() {
   try {
     const orders = readOrders();
 
-    // ✅ backfill คอมมิชชั่นให้ order เก่าที่ยังไม่ได้ยิงเข้า commissions.json
     orders.forEach((order) => {
       if (!order.commissionTracked) {
         createCommissionIfNeeded(order);
@@ -442,7 +360,6 @@ export async function GET() {
   }
 }
 
-// ================= POST =================
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CreateOrderBody;
@@ -477,28 +394,21 @@ export async function POST(request: NextRequest) {
       id: `ORD-${Date.now()}`,
       userId,
       ownerId: userId,
-
       email: body.email || "",
       fullName: body.fullName || "",
       phone: body.phone || "",
       address: body.address || "",
       note: body.note || "",
-
       items,
       total: Number(body.total || 0),
-
       paymentMethod: body.paymentMethod || "cod",
       slip: body.slip || "",
       slipName: body.slipName || "",
-
       status: "รอยืนยันคำสั่งซื้อ",
       createdAt: new Date().toISOString(),
-
       shippingAddress,
       refReview: effectiveRefReview,
       commissionTracked: false,
-
-      // ✅ ค่าเริ่มต้น
       commissionAmount: 0,
       commissionOwnerUserId: "",
       commissionStatus: "",
@@ -526,7 +436,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ================= PUT =================
 export async function PUT(request: NextRequest) {
   try {
     const body = (await request.json()) as UpdateOrderBody;
@@ -546,20 +455,15 @@ export async function PUT(request: NextRequest) {
       const prevStatus = String(orders[index].status || "").trim();
       orders[index].status = newStatus;
 
-      // ✅ บันทึก timestamp เมื่อ admin เปลี่ยนสถานะเป็น "ได้รับสินค้าแล้ว"
       if (newStatus === "ได้รับสินค้าแล้ว" && !orders[index].deliveredAt) {
         orders[index].deliveredAt = new Date().toISOString();
       }
 
-      // ✅ ถ้าเปลี่ยนสถานะเป็น "ได้รับสินค้าแล้ว" หรือ "สำเร็จแล้ว"
-      // และ commissionTracked เคยเป็น true แต่อาจไม่มี commission record
-      // — recheck โดย unset flag เพื่อให้ createCommissionsForAllItems ทำงาน
       const becameDelivered =
         (newStatus === "ได้รับสินค้าแล้ว" || newStatus === "สำเร็จแล้ว") &&
         prevStatus !== newStatus;
 
       if (becameDelivered && orders[index].commissionTracked) {
-        // ตรวจว่ามี commission ครบทุก item ที่มี refReview หรือยัง
         const commissions = readCommissions();
         const itemsWithReview = (orders[index].items || []).filter(
           (it) => String(it.refReview || "").trim()
@@ -581,7 +485,6 @@ export async function PUT(request: NextRequest) {
         });
 
         if (!allTracked) {
-          // unset เพื่อให้ recovery ทำงาน
           orders[index].commissionTracked = false;
         }
       }
@@ -593,7 +496,6 @@ export async function PUT(request: NextRequest) {
 
     writeOrders(orders);
 
-    // ถ้าคำสั่งซื้อเปลี่ยนสถานะภายหลัง ให้ลองสร้างคอมอัตโนมัติ
     createCommissionIfNeeded(orders[index]);
 
     const updatedOrders = readOrders();
@@ -609,7 +511,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// ================= DELETE =================
 export async function DELETE(request: NextRequest) {
   try {
     const body = (await request.json()) as DeleteOrderBody;

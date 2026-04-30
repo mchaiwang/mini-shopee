@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type ReviewSlide = {
   key: string;
   img: string;
@@ -42,7 +45,11 @@ const reviewsFile = path.join(dataDir, "reviews.json");
 const productsFile = path.join(dataDir, "products.json");
 
 async function ensureDataDir() {
-  await fs.mkdir(dataDir, { recursive: true });
+  try {
+    await fs.mkdir(dataDir, { recursive: true });
+  } catch {
+    // ignore
+  }
 }
 
 async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
@@ -55,8 +62,12 @@ async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
 }
 
 async function writeJsonFile(filePath: string, data: unknown) {
-  await ensureDataDir();
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+  try {
+    await ensureDataDir();
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function slugifyThai(input: string) {
@@ -85,15 +96,8 @@ function normalizeSlides(slides: unknown): ReviewSlide[] {
 
 async function getProducts() {
   const productsData = await readJsonFile<any>(productsFile, { products: [] });
-
-  if (Array.isArray(productsData?.products)) {
-    return productsData.products;
-  }
-
-  if (Array.isArray(productsData)) {
-    return productsData;
-  }
-
+  if (Array.isArray(productsData?.products)) return productsData.products;
+  if (Array.isArray(productsData)) return productsData;
   return [];
 }
 
@@ -151,18 +155,9 @@ export async function GET(req: NextRequest) {
     const rawReviews = await readJsonFile<any[]>(reviewsFile, []);
     let reviews = rawReviews.map(normalizeReview);
 
-    if (status) {
-      reviews = reviews.filter((item) => item.status === status);
-    }
-
-    if (reviewType) {
-      reviews = reviews.filter((item) => item.reviewType === reviewType);
-    }
-
-    if (userId) {
-      reviews = reviews.filter((item) => String(item.userId || "") === userId);
-    }
-
+    if (status) reviews = reviews.filter((item) => item.status === status);
+    if (reviewType) reviews = reviews.filter((item) => item.reviewType === reviewType);
+    if (userId) reviews = reviews.filter((item) => String(item.userId || "") === userId);
     if (productId) {
       reviews = reviews.filter(
         (item) =>
@@ -177,22 +172,13 @@ export async function GET(req: NextRequest) {
       return bTime - aTime;
     });
 
-    if (limit > 0) {
-      reviews = reviews.slice(0, limit);
-    }
+    if (limit > 0) reviews = reviews.slice(0, limit);
 
-    return NextResponse.json({
-      success: true,
-      reviews,
-    });
+    return NextResponse.json({ success: true, reviews });
   } catch (error) {
     console.error("GET /api/reviews error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "โหลดรีวิวไม่สำเร็จ",
-        reviews: [],
-      },
+      { success: false, message: "โหลดรีวิวไม่สำเร็จ", reviews: [] },
       { status: 500 }
     );
   }
@@ -212,16 +198,15 @@ export async function POST(req: NextRequest) {
     const title = String(body?.title || "").trim();
     const userId = String(body?.userId || "").trim();
     const creatorName = String(body?.creatorName || "").trim();
-   const creatorCode =
- String(body?.creatorCode || "").trim() ||
- (
-   await readJsonFile<any[]>(
-      path.join(process.cwd(),"data","users.json"),
+
+    const usersData = await readJsonFile<any[]>(
+      path.join(process.cwd(), "data", "users.json"),
       []
-   )
- ).find(
-   (u:any)=>String(u.id)===String(userId)
- )?.creatorCode || "";
+    );
+    const creatorCode =
+      String(body?.creatorCode || "").trim() ||
+      usersData.find((u: any) => String(u.id) === String(userId))?.creatorCode || "";
+
     const orderId = String(body?.orderId || "").trim();
     const reviewType = String(body?.reviewType || "creator_slide").trim();
     const productId = Number(body?.productId || 0);
@@ -292,8 +277,7 @@ export async function POST(req: NextRequest) {
       rating: 0,
     };
 
-    const nextReviews = [newReview, ...reviews];
-    await writeJsonFile(reviewsFile, nextReviews);
+    await writeJsonFile(reviewsFile, [newReview, ...reviews]);
 
     return NextResponse.json({
       success: true,
@@ -303,10 +287,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("POST /api/reviews error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "บันทึกรีวิวไม่สำเร็จ",
-      },
+      { success: false, message: "บันทึกรีวิวไม่สำเร็จ" },
       { status: 500 }
     );
   }
@@ -432,10 +413,7 @@ export async function DELETE(req: NextRequest) {
 
     await writeJsonFile(reviewsFile, nextReviews);
 
-    return NextResponse.json({
-      success: true,
-      message: "ลบรีวิวเรียบร้อยแล้ว",
-    });
+    return NextResponse.json({ success: true, message: "ลบรีวิวเรียบร้อยแล้ว" });
   } catch (error) {
     console.error("DELETE /api/reviews error:", error);
     return NextResponse.json(

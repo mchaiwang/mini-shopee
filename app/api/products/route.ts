@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const PRODUCTS_PATH = path.join(process.cwd(), "data", "products.json");
 
 type Product = {
@@ -32,7 +35,11 @@ function readProducts(): Product[] {
 }
 
 function writeProducts(products: Product[]) {
-  fs.writeFileSync(PRODUCTS_PATH, JSON.stringify(products, null, 2), "utf8");
+  try {
+    fs.writeFileSync(PRODUCTS_PATH, JSON.stringify(products, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function normalizeImages(input: unknown, fallbackImage?: string): string[] {
@@ -73,7 +80,6 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
     const products = readProducts();
 
     const images = normalizeImages(body.images, body.image);

@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const filePath = path.join(process.cwd(), "data/users.json");
 
 export async function GET() {
@@ -15,6 +18,11 @@ export async function GET() {
     }
 
     const authUser = JSON.parse(decodeURIComponent(auth));
+
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const user = users.find((u: any) => u.id === authUser.id);
 
@@ -29,8 +37,6 @@ export async function GET() {
         email: user.email || "",
         role: user.role || "customer",
         phone: user.phone || "",
-
-        // ✅ สำคัญ: ส่งข้อมูลครีเอเตอร์กลับไปด้วย
         creatorDisplayName: user.creatorDisplayName || "",
         creatorEnabled: user.creatorEnabled || false,
         creatorStatus: user.creatorStatus || "none",
@@ -40,7 +46,6 @@ export async function GET() {
           accountName: user.creatorPayment?.accountName || "",
           accountNumber: user.creatorPayment?.accountNumber || "",
         },
-
         address: {
           recipientName: user.address?.recipientName || "",
           phone: user.address?.phone || "",
@@ -70,6 +75,10 @@ export async function POST(req: Request) {
 
     const authUser = JSON.parse(decodeURIComponent(auth));
     const body = await req.json();
+
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const userIndex = users.findIndex((u: any) => u.id === authUser.id);
@@ -105,7 +114,11 @@ export async function POST(req: Request) {
       },
     };
 
-    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+    } catch {
+      // Vercel read-only filesystem — ignore write errors gracefully
+    }
 
     return NextResponse.json({
       success: true,

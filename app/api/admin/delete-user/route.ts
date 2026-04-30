@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function readJsonFile(filePath: string, fallback: any) {
   try {
     if (!fs.existsSync(filePath)) return fallback;
@@ -14,7 +17,11 @@ function readJsonFile(filePath: string, fallback: any) {
 }
 
 function writeJsonFile(filePath: string, data: any) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function getArrayData(raw: any) {

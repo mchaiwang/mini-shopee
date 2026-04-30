@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type Product = {
   id: number;
   name: string;
@@ -21,14 +24,14 @@ const legacyJsPaths = [
 ];
 
 function ensureDataFile() {
-  const dir = path.dirname(jsonFilePath);
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  if (!fs.existsSync(jsonFilePath)) {
-    fs.writeFileSync(jsonFilePath, "[]", "utf8");
+  try {
+    const dir = path.dirname(jsonFilePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(jsonFilePath)) {
+      fs.writeFileSync(jsonFilePath, "[]", "utf8");
+    }
+  } catch {
+    // Vercel read-only filesystem — ignore
   }
 }
 
@@ -81,14 +84,9 @@ function normalizeProduct(product: any): Product {
 function extractArrayFromLegacyJs(raw: string): any[] {
   try {
     const match = raw.match(/const\s+products\s*=\s*(\[[\s\S]*\]);?\s*export\s+default\s+products;?/);
-
     if (!match || !match[1]) return [];
-
     const arrayLiteral = match[1];
-
-    // ใช้ Function เพื่อ parse เฉพาะ array literal จากไฟล์ legacy products.js
     const parsed = new Function(`return (${arrayLiteral});`)();
-
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -99,15 +97,12 @@ function readLegacyProductsFromJs(): Product[] {
   try {
     for (const filePath of legacyJsPaths) {
       if (!fs.existsSync(filePath)) continue;
-
       const raw = fs.readFileSync(filePath, "utf8");
       const parsed = extractArrayFromLegacyJs(raw);
-
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(normalizeProduct);
       }
     }
-
     return [];
   } catch {
     return [];
@@ -119,9 +114,7 @@ function readProductsFromJson(): Product[] {
     ensureDataFile();
     const raw = fs.readFileSync(jsonFilePath, "utf8");
     const parsed = raw ? JSON.parse(raw) : [];
-
     if (!Array.isArray(parsed)) return [];
-
     return parsed.map(normalizeProduct);
   } catch {
     return [];
@@ -130,13 +123,9 @@ function readProductsFromJson(): Product[] {
 
 function readProducts(): Product[] {
   const jsonProducts = readProductsFromJson();
-
-  if (jsonProducts.length > 0) {
-    return jsonProducts;
-  }
+  if (jsonProducts.length > 0) return jsonProducts;
 
   const legacyProducts = readLegacyProductsFromJs();
-
   if (legacyProducts.length > 0) {
     writeProducts(legacyProducts);
     return legacyProducts;
@@ -146,11 +135,14 @@ function readProducts(): Product[] {
 }
 
 function writeProducts(products: Product[]) {
-  ensureDataFile();
-  fs.writeFileSync(jsonFilePath, JSON.stringify(products, null, 2), "utf8");
+  try {
+    ensureDataFile();
+    fs.writeFileSync(jsonFilePath, JSON.stringify(products, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
-// ================= GET =================
 export async function GET() {
   try {
     const products = readProducts();
@@ -163,7 +155,6 @@ export async function GET() {
   }
 }
 
-// ================= POST =================
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -211,7 +202,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ================= PUT =================
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -228,7 +218,6 @@ export async function PUT(request: NextRequest) {
     }
 
     const products = readProducts();
-
     let index = -1;
 
     if (incomingId) {
@@ -286,7 +275,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// ================= DELETE =================
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

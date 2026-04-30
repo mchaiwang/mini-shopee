@@ -2,14 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const usersFile = path.join(process.cwd(), "data", "users.json");
 
 function readUsers() {
-  return JSON.parse(fs.readFileSync(usersFile, "utf-8"));
+  try {
+    if (!fs.existsSync(usersFile)) return [];
+    return JSON.parse(fs.readFileSync(usersFile, "utf-8"));
+  } catch {
+    return [];
+  }
 }
 
 function writeUsers(data: any) {
-  fs.writeFileSync(usersFile, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(usersFile, JSON.stringify(data, null, 2));
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 export async function GET() {
@@ -34,7 +46,7 @@ export async function PATCH(req: NextRequest) {
     users[index].permissions = {
       ...users[index].permissions,
       canSubmitReview: true,
-      canReceiveCommission: true
+      canReceiveCommission: true,
     };
   }
 

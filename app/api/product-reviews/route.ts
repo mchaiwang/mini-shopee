@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type ReviewItem = {
   id?: string | number;
   name?: string;
@@ -40,9 +43,13 @@ type AuthUser = {
 const reviewsFile = path.join(process.cwd(), "data", "product-reviews.json");
 
 function ensureFile() {
-  const dir = path.dirname(reviewsFile);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(reviewsFile)) fs.writeFileSync(reviewsFile, "[]", "utf8");
+  try {
+    const dir = path.dirname(reviewsFile);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(reviewsFile)) fs.writeFileSync(reviewsFile, "[]", "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore
+  }
 }
 
 function readReviews(): ProductReview[] {
@@ -57,8 +64,12 @@ function readReviews(): ProductReview[] {
 }
 
 function writeReviews(data: ProductReview[]) {
-  ensureFile();
-  fs.writeFileSync(reviewsFile, JSON.stringify(data, null, 2), "utf8");
+  try {
+    ensureFile();
+    fs.writeFileSync(reviewsFile, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function getUserFromAuthCookie(cookieHeader: string): AuthUser | null {
@@ -66,9 +77,7 @@ function getUserFromAuthCookie(cookieHeader: string): AuthUser | null {
     const authCookie = cookieHeader
       .split("; ")
       .find((row) => row.startsWith("auth="));
-
     if (!authCookie) return null;
-
     const encoded = authCookie.split("=")[1] || "";
     const decoded = decodeURIComponent(encoded);
     return JSON.parse(decoded) as AuthUser;

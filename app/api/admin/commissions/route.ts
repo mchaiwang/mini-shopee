@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const ordersPath = path.join(process.cwd(), "data", "orders.json");
 const withdrawsPath = path.join(process.cwd(), "data", "withdraws.json");
 const commissionsPath = path.join(process.cwd(), "data", "commissions.json");
@@ -20,9 +23,13 @@ function readJson(filePath: string, fallback: any) {
 }
 
 function writeJson(filePath: string, data: any) {
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function asArray(raw: any, key?: string) {
@@ -67,12 +74,6 @@ function isRealCommission(commission: any) {
   return true;
 }
 
-/**
- * ล้าง orphan commissions — record ที่อ้างถึง entity (order/review/creator/product)
- * ที่ถูกลบไปแล้ว — แล้วบันทึก commissions.json กลับลง disk
- *
- * ส่งคืนรายการ commissions ที่เหลือ (ผ่าน isRealCommission + ไม่ orphan)
- */
 function cleanupOrphanCommissions(): any[] {
   const commissionsRaw = readJson(commissionsPath, []);
   const ordersRaw = readJson(ordersPath, []);
@@ -109,7 +110,6 @@ function cleanupOrphanCommissions(): any[] {
     return true;
   });
 
-  // เขียนกลับเฉพาะเมื่อมีการเปลี่ยนแปลง (เพื่อลด disk write)
   if (cleaned.length !== allCommissions.length) {
     writeJson(
       commissionsPath,
@@ -135,8 +135,6 @@ function buildRows() {
   const reviews = asArray(reviewsRaw, "reviews");
   const products = asArray(productsRaw, "products");
 
-  // ✅ Step 1: filter ด้วย isRealCommission ตามเดิม
-  // ✅ Step 2: filter orphan records (commission ที่อ้างถึง entity ที่ถูกลบไปแล้ว)
   const commissions = commissionsAll
     .filter(isRealCommission)
     .filter((commission: any) => {
@@ -156,7 +154,6 @@ function buildRows() {
         (p: any) => String(p.id) === productId
       );
 
-      // ถ้าอ้างถึง entity ที่ไม่มีจริงแม้แต่อันเดียว → ตัดทิ้ง (orphan)
       return orderExists && reviewExists && creatorExists && productExists;
     });
 
@@ -194,13 +191,10 @@ function buildRows() {
 
     const rate = Number(commission.commissionRate ?? review?.commissionRate ?? 0.1);
 
-    // ✅ คำนวณ amount จาก sale × rate ก่อน (กัน case ที่ commissionAmount = 0)
     const explicitAmount = Number(commission.commissionAmount || commission.amount || 0);
     const calculatedAmount = Number((saleAmount * rate).toFixed(2));
     const amount = explicitAmount > 0 ? explicitAmount : calculatedAmount;
 
-    // ✅ Override status เป็น "unconfirmed" ถ้า order ยังไม่ delivered
-    // (sync logic กับ creator/withdraw — ทำให้ admin/creator เห็นยอดตรงกัน)
     const orderStatus = String(order?.status || "").trim();
     const isDelivered =
       orderStatus === "ได้รับสินค้าแล้ว" || orderStatus === "สำเร็จแล้ว";
@@ -274,7 +268,6 @@ function buildRows() {
 
       if (amount <= 0) return;
 
-      // ✅ ถ้า order ยังไม่ delivered — status = "unconfirmed"
       const orderStatusInner = String(order.status || "").trim();
       const isDeliveredInner =
         orderStatusInner === "ได้รับสินค้าแล้ว" || orderStatusInner === "สำเร็จแล้ว";
@@ -334,7 +327,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // ล้าง orphan commissions ก่อนสร้าง rows
     cleanupOrphanCommissions();
 
     return NextResponse.json({ success: true, rows: buildRows() });

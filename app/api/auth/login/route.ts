@@ -3,11 +3,19 @@ import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const filePath = path.join(process.cwd(), "data/users.json");
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ error: "ไม่พบบัญชี" }, { status: 400 });
+    }
+
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
     const user = users.find((u: any) => u.email === body.email);
@@ -24,29 +32,25 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({ success: true });
 
-    // cookie หลัก
     res.cookies.set(
-  "auth",
-  JSON.stringify({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
+      "auth",
+      JSON.stringify({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        creatorEnabled: user.creatorEnabled || false,
+        creatorStatus: user.creatorStatus || "none",
+        permissions: user.permissions || {},
+      }),
+      {
+        path: "/",
+        httpOnly: false,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+      }
+    );
 
-    // 🔥 เพิ่ม 3 ตัวนี้
-    creatorEnabled: user.creatorEnabled || false,
-    creatorStatus: user.creatorStatus || "none",
-    permissions: user.permissions || {},
-  }),
-  {
-    path: "/",
-    httpOnly: false,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-  }
-);
-
-    // cookie สำหรับ middleware เช็ก role โดยตรง
     res.cookies.set("auth_role", user.role || "customer", {
       path: "/",
       httpOnly: false,

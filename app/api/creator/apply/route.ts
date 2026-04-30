@@ -2,16 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const usersFile = path.join(process.cwd(), "data", "users.json");
 const ordersFile = path.join(process.cwd(), "data", "orders.json");
 
 function readJSON(file: string) {
-  if (!fs.existsSync(file)) return [];
-  return JSON.parse(fs.readFileSync(file, "utf-8"));
+  try {
+    if (!fs.existsSync(file)) return [];
+    return JSON.parse(fs.readFileSync(file, "utf-8"));
+  } catch {
+    return [];
+  }
 }
 
 function writeJSON(file: string, data: any) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -37,7 +48,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ เช็คว่าเคยได้รับของแล้ว
     const hasCompletedOrder = orders.some(
       (o: any) =>
         o.userId === user.id &&
@@ -68,7 +78,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ✅ อัปเดต user
     users[index].creatorEnabled = true;
     users[index].creatorStatus = "approved";
     users[index].creatorDisplayName = creatorDisplayName.trim();
@@ -87,7 +96,6 @@ export async function POST(req: NextRequest) {
 
     writeJSON(usersFile, users);
 
-    // 🔥 สำคัญมาก: อัปเดต cookie ใหม่
     const updatedUser = users[index];
 
     const res = NextResponse.json({

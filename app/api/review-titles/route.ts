@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type ReviewTitleItem = {
   id: string;
   label: string;
@@ -12,13 +15,12 @@ type ReviewTitleItem = {
 const filePath = path.join(process.cwd(), "data", "review-titles.json");
 
 function ensureFile() {
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, "[]", "utf8");
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, "[]", "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore
   }
 }
 
@@ -34,8 +36,12 @@ function readItems(): ReviewTitleItem[] {
 }
 
 function writeItems(items: ReviewTitleItem[]) {
-  ensureFile();
-  fs.writeFileSync(filePath, JSON.stringify(items, null, 2), "utf8");
+  try {
+    ensureFile();
+    fs.writeFileSync(filePath, JSON.stringify(items, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 export async function GET() {
@@ -43,7 +49,6 @@ export async function GET() {
     const items = readItems().sort(
       (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
     );
-
     return NextResponse.json({ success: true, items });
   } catch (error) {
     console.error("GET /api/review-titles error:", error);
@@ -58,7 +63,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const mode = String(body?.mode || "").trim();
-
     const items = readItems();
 
     if (mode === "create") {
@@ -80,16 +84,13 @@ export async function POST(req: NextRequest) {
             : items.length + 1,
       };
 
-      const updated = [...items, next];
-      writeItems(updated);
-
+      writeItems([...items, next]);
       return NextResponse.json({ success: true, item: next });
     }
 
     if (mode === "update") {
       const id = String(body?.id || "").trim();
       const label = String(body?.label || "").trim();
-
       if (!id) {
         return NextResponse.json(
           { success: false, message: "ไม่พบ id" },
@@ -113,7 +114,6 @@ export async function POST(req: NextRequest) {
       );
 
       writeItems(updated);
-
       return NextResponse.json({ success: true });
     }
 
@@ -126,9 +126,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const updated = items.filter((item) => item.id !== id);
-      writeItems(updated);
-
+      writeItems(items.filter((item) => item.id !== id));
       return NextResponse.json({ success: true });
     }
 

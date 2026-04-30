@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type CommissionRecord = {
   id: string;
   reviewId?: string;
@@ -43,10 +46,6 @@ type WithdrawRecord = {
   approvedAt?: string;
   paidAt?: string;
   rejectedAt?: string;
-  /**
-   * Snapshot ของ commission ที่ประกอบเป็น withdraw นี้ ณ ตอนสร้าง
-   * เก็บเพื่อให้ pop-up แสดงรายการได้ถูกต้องแม้ commission อื่นจะเปลี่ยนแปลงภายหลัง
-   */
   items?: WithdrawCommissionItem[];
 };
 
@@ -63,10 +62,14 @@ const productsFile = path.join(process.cwd(), "data", "products.json");
 const usersFile = path.join(process.cwd(), "data", "users.json");
 
 function ensureJsonFile(filePath: string, fallback: unknown) {
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), "utf8");
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), "utf8");
+    }
+  } catch {
+    // Vercel read-only filesystem — ignore
   }
 }
 
@@ -81,8 +84,12 @@ function readJsonFile<T>(filePath: string, fallback: T): T {
 }
 
 function writeJsonFile(filePath: string, data: unknown) {
-  ensureJsonFile(filePath, []);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  try {
+    ensureJsonFile(filePath, []);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Vercel read-only filesystem — ignore write errors gracefully
+  }
 }
 
 function asArray(raw: any, key?: string) {
@@ -110,10 +117,6 @@ function getCommissionAmount(c: any) {
   return Number(c.commissionAmount ?? c.amount ?? 0);
 }
 
-/**
- * เช็คว่า commission record มีข้อมูลครบเป็น "ของจริง" หรือไม่
- * (ตรงกับ admin/commissions/route.ts เพื่อให้ admin/creator เห็นยอดตรงกัน)
- */
 function isRealCommission(commission: any): boolean {
   const reviewId = String(commission.reviewId || "").trim();
   const creatorUserId = String(
@@ -135,10 +138,6 @@ function isRealCommission(commission: any): boolean {
   return true;
 }
 
-/**
- * ล้าง orphan commissions — record ที่อ้างถึง entity ที่ถูกลบไปแล้ว
- * (สอดคล้องกับ logic ใน admin/commissions/route.ts)
- */
 function cleanupOrphanCommissions(): any[] {
   const commissionsRaw = readJsonFile<any>(commissionsFile, []);
   const ordersRaw = readJsonFile<any>(ordersFile, []);
@@ -202,7 +201,6 @@ function buildRowsForCreator(userId: string) {
   const products = asArray(productsRaw, "products");
   const users = asArray(usersRaw, "users");
 
-  // ✅ filter ตามมาตรฐานเดียวกับ admin/commissions
   const orderIds = new Set(orders.map((o: any) => String(o.id)));
   const reviewIds = new Set(reviews.map((r: any) => String(r.id)));
   const userIds = new Set(users.map((u: any) => String(u.id)));
@@ -255,7 +253,6 @@ function buildRowsForCreator(userId: string) {
       const commissionRate = Number(
         commission.commissionRate ?? review?.commissionRate ?? product?.commissionRate ?? 0.1
       );
-      // ✅ คำนวณจาก sale × rate ก่อน (กัน case ที่ commissionAmount = 0)
       const explicitCommissionAmount = Number(commission.commissionAmount || commission.amount || 0);
       const calculatedCommissionAmount = Number((saleAmount * commissionRate).toFixed(2));
       const commissionAmount =
@@ -263,9 +260,6 @@ function buildRowsForCreator(userId: string) {
           ? explicitCommissionAmount
           : calculatedCommissionAmount;
 
-      // ✅ ถ้า order ยังไม่ "ได้รับสินค้าแล้ว"/"สำเร็จแล้ว"
-      // override status เป็น "unconfirmed" — ไม่ว่า commission record จะมี status อะไร
-      // (กัน stale data จาก patch รุ่นก่อน + business rule ใหม่: commission ใช้ได้เมื่อรับของแล้วเท่านั้น)
       const orderStatus = String(order?.status || "").trim();
       const isDelivered =
         orderStatus === "ได้รับสินค้าแล้ว" || orderStatus === "สำเร็จแล้ว";
@@ -311,10 +305,6 @@ function buildRowsForCreator(userId: string) {
       const review = reviews.find((r: any) => String(r.id) === reviewId);
       const product = products.find((p: any) => String(p.id) === productId);
 
-      // ✅ Priority resolution:
-      // 1. item.creatorUserId (ถ้า frontend บันทึกไว้)
-      // 2. review.commissionOwnerUserId / review.userId (ตรงที่สุดเพราะ item มี refReview ระบุชัด)
-      // 3. order.commissionOwnerUserId (fallback — แต่ order ที่มีหลาย creators จะให้ค่าแค่ creator เดียว)
       const creatorUserId = String(
         item.creatorUserId ||
           review?.commissionOwnerUserId ||
@@ -329,8 +319,6 @@ function buildRowsForCreator(userId: string) {
       const saleAmount = Number(item.price || 0) * qty;
       const rate = Number(item.commissionRate || review?.commissionRate || product?.commissionRate || 0.1);
 
-      // ✅ คำนวณ amount จาก sale × rate เสมอ (ใช้ค่า explicit เฉพาะกรณี > 0)
-      // ไม่ใช่ ?? เพราะ 0 ?? x จะคืน 0 (nullish coalescing ผ่านเฉพาะ undefined/null)
       const explicitItemAmount = Number(item.commissionAmount || 0);
       const explicitOrderAmount = Number(order.commissionAmount || 0);
       const calculatedAmount = Number((saleAmount * rate).toFixed(2));
@@ -342,7 +330,6 @@ function buildRowsForCreator(userId: string) {
             ? explicitOrderAmount
             : calculatedAmount;
 
-      // ✅ ถ้า order ยังไม่ "ได้รับสินค้าแล้ว"/"สำเร็จแล้ว" — commission อยู่ในสถานะ "unconfirmed" (รอยืนยัน)
       const orderStatus = String(order.status || "").trim();
       const isDelivered =
         orderStatus === "ได้รับสินค้าแล้ว" || orderStatus === "สำเร็จแล้ว";
@@ -390,7 +377,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "unauthorized" }, { status: 401 });
     }
 
-    // ล้าง orphan commissions ก่อนคำนวณ wallet — ทำให้ admin/creator เห็นยอดตรงกัน
     cleanupOrphanCommissions();
 
     const myCommissions = buildRowsForCreator(String(user.id));
@@ -443,9 +429,6 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // ✅ บันทึก snapshot ของ commission ที่ประกอบเป็น withdraw นี้ลงใน withdraw record
-    // เพื่อให้ pop-up "คอมมิชชั่นที่ประกอบเป็นยอดถอนนี้" แสดงข้อมูลคงที่
-    // ไม่เปลี่ยนตามสถานะปัจจุบันของ orders/commissions
     const reviewsRaw = readJsonFile<any>(reviewsFile, []);
     const productsRaw = readJsonFile<any>(productsFile, []);
     const reviews = asArray(reviewsRaw, "reviews");
