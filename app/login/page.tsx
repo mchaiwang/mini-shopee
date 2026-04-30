@@ -4,75 +4,162 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
+type Mode = "login" | "register" | "verifyOtp" | "forgotPassword" | "resetPassword";
+
 function LoginPageInner() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
-  const isMobile = useIsMobile(820); // ซ่อน promo เร็วหน่อยเพราะ panel แนวนอนต้องการพื้นที่
+  const isMobile = useIsMobile(820);
 
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<Mode>("login");
+  const [loading, setLoading] = useState(false);
+  const [devOtp, setDevOtp] = useState("");
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
+    otp: "",
+    newPassword: "",
   });
 
-  const handleSubmit = async () => {
-    if (mode === "login") {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
-      });
+  const titleMap: Record<Mode, string> = {
+    login: "ยินดีต้อนรับกลับ",
+    register: "สร้างบัญชีผู้ใช้",
+    verifyOtp: "ยืนยัน OTP",
+    forgotPassword: "ลืมรหัสผ่าน",
+    resetPassword: "ตั้งรหัสผ่านใหม่",
+  };
 
-      const data = await res.json().catch(() => null);
+  const subtitleMap: Record<Mode, string> = {
+    login: "เข้าสู่ระบบเพื่อดำเนินการต่อ",
+    register: "กรอกข้อมูลเพื่อสมัครสมาชิกใหม่",
+    verifyOtp: "กรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล",
+    forgotPassword: "กรอกอีเมลเพื่อรับรหัส OTP สำหรับรีเซตรหัสผ่าน",
+    resetPassword: "กรอก OTP และรหัสผ่านใหม่",
+  };
 
-      if (res.ok) {
+  async function handleSubmit() {
+    try {
+      setLoading(true);
+
+      if (mode === "login") {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: form.email, password: form.password }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          alert(data?.error || "เข้าสู่ระบบไม่สำเร็จ");
+          return;
+        }
+
         window.dispatchEvent(new Event("auth-changed"));
-
         setTimeout(() => {
           location.href = nextUrl;
         }, 300);
-      } else {
-        alert(data?.error || "เข้าสู่ระบบไม่สำเร็จ");
+        return;
       }
-    }
 
-    if (mode === "register") {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        }),
-      });
+      if (mode === "register") {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            password: form.password,
+          }),
+        });
 
-      const data = await res.json().catch(() => null);
+        const data = await res.json().catch(() => null);
 
-      if (res.ok) {
-        alert("สมัครสำเร็จแล้ว กรุณา Login");
+        if (!res.ok) {
+          alert(data?.error || "สมัครไม่สำเร็จ");
+          return;
+        }
+
+        setDevOtp(data?.devOtp || "");
+        alert("สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
+        setMode("verifyOtp");
+        return;
+      }
+
+      if (mode === "verifyOtp") {
+        const res = await fetch("/api/auth/verify-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: form.email, otp: form.otp }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          alert(data?.error || "OTP ไม่ถูกต้อง");
+          return;
+        }
+
+        alert("ยืนยันอีเมลสำเร็จ กรุณาเข้าสู่ระบบ");
+        setDevOtp("");
         setMode("login");
-      } else {
-        alert(data?.error || "สมัครไม่สำเร็จ");
+        return;
       }
+
+      if (mode === "forgotPassword") {
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: form.email }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          alert(data?.error || "ส่ง OTP ไม่สำเร็จ");
+          return;
+        }
+
+        setDevOtp(data?.devOtp || "");
+        alert("ส่ง OTP แล้ว กรุณากรอก OTP และรหัสผ่านใหม่");
+        setMode("resetPassword");
+        return;
+      }
+
+      if (mode === "resetPassword") {
+        const res = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: form.email,
+            otp: form.otp,
+            newPassword: form.newPassword,
+          }),
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          alert(data?.error || "รีเซตรหัสผ่านไม่สำเร็จ");
+          return;
+        }
+
+        alert("ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบ");
+        setDevOtp("");
+        setMode("login");
+      }
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
     <div
       style={{
         minHeight: "calc(100vh - 80px)",
-        background:
-          "linear-gradient(180deg, #fff7f5 0%, #fff 35%, #fafafa 100%)",
+        background: "linear-gradient(180deg, #fff7f5 0%, #fff 35%, #fafafa 100%)",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -89,138 +176,51 @@ function LoginPageInner() {
           alignItems: "stretch",
         }}
       >
-        {/* left promo - ซ่อนบนมือถือ */}
         {!isMobile && (
-        <div
-          style={{
-            borderRadius: 28,
-            background:
-              "linear-gradient(135deg, #ee4d2d 0%, #ff7337 55%, #ff9b76 100%)",
-            color: "#fff",
-            padding: 36,
-            boxShadow: "0 18px 40px rgba(238,77,45,0.22)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            minHeight: 560,
-          }}
-        >
           <div
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: 22,
-              background: "rgba(255,255,255,0.18)",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 34,
-              marginBottom: 22,
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            🌿
-          </div>
-
-          <h1
-            style={{
-              fontSize: 42,
-              lineHeight: 1.12,
-              fontWeight: 900,
-              margin: 0,
-            }}
-          >
-            Herbal Store
-          </h1>
-
-          <div
-            style={{
-              marginTop: 14,
-              fontSize: 18,
-              lineHeight: 1.75,
-              opacity: 0.96,
-              maxWidth: 460,
-            }}
-          >
-            เข้าสู่ระบบเพื่อสั่งซื้อสินค้า จัดการที่อยู่จัดส่ง
-            และติดตามคำสั่งซื้อได้สะดวกยิ่งขึ้น
-          </div>
-
-          <div
-            style={{
-              marginTop: 26,
-              display: "grid",
-              gap: 12,
-              maxWidth: 420,
-            }}
-          >
-            <div style={featureRow}>
-              <span style={featureDot}>✓</span>
-              <span>บันทึกข้อมูลผู้รับและที่อยู่จัดส่งอัตโนมัติ</span>
-            </div>
-            <div style={featureRow}>
-              <span style={featureDot}>✓</span>
-              <span>ตรวจสอบสถานะคำสั่งซื้อได้ทันที</span>
-            </div>
-            <div style={featureRow}>
-              <span style={featureDot}>✓</span>
-              <span>ชำระเงินและอัปโหลดสลิปได้สะดวก</span>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* mini header สำหรับมือถือ */}
-        {isMobile && (
-          <div
-            style={{
+              borderRadius: 28,
+              background: "linear-gradient(135deg, #ee4d2d 0%, #ff7337 55%, #ff9b76 100%)",
+              color: "#fff",
+              padding: 36,
+              boxShadow: "0 18px 40px rgba(238,77,45,0.22)",
               display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "14px 4px",
-              marginBottom: 4,
+              flexDirection: "column",
+              justifyContent: "center",
+              minHeight: 560,
             }}
           >
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)",
+                width: 72,
+                height: 72,
+                borderRadius: 22,
+                background: "rgba(255,255,255,0.18)",
                 display: "grid",
                 placeItems: "center",
-                fontSize: 22,
-                color: "#fff",
-                boxShadow: "0 6px 14px rgba(238,77,45,0.24)",
-                flexShrink: 0,
+                fontSize: 34,
+                marginBottom: 22,
               }}
             >
               🌿
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 900,
-                  color: "#0f172a",
-                  lineHeight: 1.2,
-                }}
-              >
-                Herbal Store
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#64748b",
-                  marginTop: 2,
-                }}
-              >
-                สมุนไพรไทย รีวิวจริง
-              </div>
+
+            <h1 style={{ fontSize: 42, lineHeight: 1.12, fontWeight: 900, margin: 0 }}>
+              Herbal Store
+            </h1>
+
+            <div style={{ marginTop: 14, fontSize: 18, lineHeight: 1.75, opacity: 0.96 }}>
+              เข้าสู่ระบบเพื่อสั่งซื้อสินค้า จัดการที่อยู่จัดส่ง และติดตามคำสั่งซื้อได้สะดวกยิ่งขึ้น
+            </div>
+
+            <div style={{ marginTop: 26, display: "grid", gap: 12 }}>
+              <div style={featureRow}><span style={featureDot}>✓</span><span>บันทึกข้อมูลผู้รับและที่อยู่จัดส่งอัตโนมัติ</span></div>
+              <div style={featureRow}><span style={featureDot}>✓</span><span>ตรวจสอบสถานะคำสั่งซื้อได้ทันที</span></div>
+              <div style={featureRow}><span style={featureDot}>✓</span><span>ชำระเงินและอัปโหลดสลิปได้สะดวก</span></div>
             </div>
           </div>
         )}
 
-        {/* right form */}
         <div
           style={{
             background: "#fff",
@@ -234,7 +234,6 @@ function LoginPageInner() {
             minHeight: isMobile ? "auto" : 560,
           }}
         >
-          {/* toggle */}
           <div
             style={{
               display: "flex",
@@ -246,75 +245,27 @@ function LoginPageInner() {
               gap: 6,
             }}
           >
-            <button
-              onClick={() => setMode("login")}
-              style={{
-                flex: 1,
-                height: 46,
-                borderRadius: 12,
-                border: "none",
-                background:
-                  mode === "login"
-                    ? "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)"
-                    : "transparent",
-                color: mode === "login" ? "#fff" : "#9a3412",
-                fontWeight: 900,
-                cursor: "pointer",
-                boxShadow:
-                  mode === "login"
-                    ? "0 10px 20px rgba(238,77,45,0.18)"
-                    : "none",
-              }}
-            >
+            <button onClick={() => setMode("login")} style={tabStyle(mode === "login")}>
               เข้าสู่ระบบ
             </button>
-
-            <button
-              onClick={() => setMode("register")}
-              style={{
-                flex: 1,
-                height: 46,
-                borderRadius: 12,
-                border: "none",
-                background:
-                  mode === "register"
-                    ? "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)"
-                    : "transparent",
-                color: mode === "register" ? "#fff" : "#9a3412",
-                fontWeight: 900,
-                cursor: "pointer",
-                boxShadow:
-                  mode === "register"
-                    ? "0 10px 20px rgba(238,77,45,0.18)"
-                    : "none",
-              }}
-            >
+            <button onClick={() => setMode("register")} style={tabStyle(mode === "register")}>
               สมัครสมาชิก
             </button>
           </div>
 
-          <h2
-            style={{
-              margin: "0 0 8px",
-              fontSize: isMobile ? 22 : 30,
-              fontWeight: 900,
-              color: "#0f172a",
-            }}
-          >
-            {mode === "login" ? "ยินดีต้อนรับกลับ" : "สร้างบัญชีผู้ใช้"}
+          <h2 style={{ margin: "0 0 8px", fontSize: isMobile ? 22 : 30, fontWeight: 900 }}>
+            {titleMap[mode]}
           </h2>
 
-          <div
-            style={{
-              color: "#64748b",
-              marginBottom: isMobile ? 14 : 18,
-              fontSize: isMobile ? 13 : 15,
-            }}
-          >
-            {mode === "login"
-              ? "เข้าสู่ระบบเพื่อดำเนินการต่อ"
-              : "กรอกข้อมูลเพื่อสมัครสมาชิกใหม่"}
+          <div style={{ color: "#64748b", marginBottom: 18, fontSize: 15 }}>
+            {subtitleMap[mode]}
           </div>
+
+          {devOtp && (
+            <div style={otpDevBoxStyle}>
+              OTP ทดสอบ: <b>{devOtp}</b>
+            </div>
+          )}
 
           {mode === "register" && (
             <input
@@ -332,49 +283,102 @@ function LoginPageInner() {
             style={inputStyle}
           />
 
-          <input
-            placeholder="Password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            style={inputStyle}
-          />
+          {(mode === "login" || mode === "register") && (
+            <input
+              placeholder="Password"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              style={inputStyle}
+            />
+          )}
+
+          {(mode === "verifyOtp" || mode === "resetPassword") && (
+            <input
+              placeholder="OTP 6 หลัก"
+              value={form.otp}
+              onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+              style={inputStyle}
+            />
+          )}
+
+          {mode === "resetPassword" && (
+            <input
+              placeholder="รหัสผ่านใหม่"
+              type="password"
+              value={form.newPassword}
+              onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+              style={inputStyle}
+            />
+          )}
 
           <button
             onClick={handleSubmit}
+            disabled={loading}
             style={{
               width: "100%",
               height: 52,
               borderRadius: 16,
               border: "none",
-              background: "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)",
+              background: loading ? "#cbd5e1" : "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)",
               color: "#fff",
-              cursor: "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
               fontWeight: 900,
               fontSize: 17,
-              boxShadow: "0 12px 24px rgba(238,77,45,0.20)",
+              boxShadow: loading ? "none" : "0 12px 24px rgba(238,77,45,0.20)",
               marginTop: 6,
             }}
           >
-            {mode === "login" ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
+            {loading
+              ? "กำลังดำเนินการ..."
+              : mode === "login"
+              ? "เข้าสู่ระบบ"
+              : mode === "register"
+              ? "สมัครสมาชิก"
+              : mode === "verifyOtp"
+              ? "ยืนยัน OTP"
+              : mode === "forgotPassword"
+              ? "ส่ง OTP"
+              : "ตั้งรหัสผ่านใหม่"}
           </button>
 
-          <div
-            style={{
-              marginTop: 16,
-              color: "#64748b",
-              fontSize: 14,
-              textAlign: "center",
-            }}
-          >
+          {mode === "login" && (
+            <button type="button" onClick={() => setMode("forgotPassword")} style={linkButtonStyle}>
+              ลืมรหัสผ่าน?
+            </button>
+          )}
+
+          {(mode === "verifyOtp" || mode === "forgotPassword" || mode === "resetPassword") && (
+            <button type="button" onClick={() => setMode("login")} style={linkButtonStyle}>
+              กลับไปเข้าสู่ระบบ
+            </button>
+          )}
+
+          <div style={{ marginTop: 16, color: "#64748b", fontSize: 14, textAlign: "center" }}>
             {mode === "login"
               ? "ยังไม่มีบัญชี? กดที่ สมัครสมาชิก"
-              : "มีบัญชีอยู่แล้ว? กดที่ เข้าสู่ระบบ"}
+              : mode === "register"
+              ? "มีบัญชีอยู่แล้ว? กดที่ เข้าสู่ระบบ"
+              : "ตรวจสอบอีเมลของคุณ หรือใช้ OTP ทดสอบที่แสดงในหน้านี้"}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function tabStyle(active: boolean): React.CSSProperties {
+  return {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    border: "none",
+    background: active ? "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)" : "transparent",
+    color: active ? "#fff" : "#9a3412",
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: active ? "0 10px 20px rgba(238,77,45,0.18)" : "none",
+  };
 }
 
 const inputStyle: React.CSSProperties = {
@@ -389,6 +393,25 @@ const inputStyle: React.CSSProperties = {
   background: "#fff",
   color: "#111827",
   boxShadow: "0 1px 2px rgba(15,23,42,0.02)",
+};
+
+const linkButtonStyle: React.CSSProperties = {
+  marginTop: 10,
+  border: "none",
+  background: "transparent",
+  color: "#ee4d2d",
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+const otpDevBoxStyle: React.CSSProperties = {
+  marginBottom: 12,
+  padding: 12,
+  borderRadius: 12,
+  background: "#fff7ed",
+  border: "1px solid #fdba74",
+  color: "#9a3412",
+  fontWeight: 800,
 };
 
 const featureRow: React.CSSProperties = {
@@ -410,6 +433,7 @@ const featureDot: React.CSSProperties = {
   fontWeight: 900,
   flexShrink: 0,
 };
+
 export default function LoginPage() {
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>

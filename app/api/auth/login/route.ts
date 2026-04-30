@@ -25,7 +25,12 @@ export async function POST(req: Request) {
     }
 
     const ok = await bcrypt.compare(body.password, user.passwordHash);
-
+if (!user.emailVerified) {
+  return NextResponse.json(
+    { error: "กรุณายืนยัน OTP ทางอีเมลก่อน" },
+    { status: 400 }
+  );
+}
     if (!ok) {
       return NextResponse.json({ error: "รหัสผ่านไม่ถูกต้อง" }, { status: 400 });
     }

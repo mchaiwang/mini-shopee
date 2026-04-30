@@ -8,41 +8,54 @@ export const dynamic = "force-dynamic";
 
 const filePath = path.join(process.cwd(), "data/users.json");
 
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const email = String(body.email || "").trim().toLowerCase();
+    const name = String(body.name || "").trim();
+    const password = String(body.password || "");
 
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบ" }, { status: 400 });
     }
 
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const exists = users.find((u: any) => String(u.email || "").toLowerCase() === email);
 
-    const exists = users.find((u: any) => u.email === body.email);
     if (exists) {
       return NextResponse.json({ error: "Email already used" }, { status: 400 });
     }
 
-    const passwordHash = await bcrypt.hash(body.password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
+    const otp = generateOTP();
 
     const newUser = {
       id: "user-" + Date.now(),
-      name: body.name,
-      email: body.email,
+      name,
+      email,
       passwordHash,
       role: "customer",
       createdAt: new Date().toISOString(),
+      emailVerified: false,
+      otpCode: otp,
+      otpPurpose: "verify",
+      otpExpiresAt: Date.now() + 5 * 60 * 1000,
     };
 
     users.push(newUser);
+    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
 
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
-    } catch {
-      // Vercel read-only filesystem — ignore write errors gracefully
-    }
+    console.log("REGISTER OTP:", otp);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      needVerify: true,
+      devOtp: otp,
+    });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
     return NextResponse.json({ error: "server error" }, { status: 500 });

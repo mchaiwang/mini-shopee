@@ -4,6 +4,10 @@
     "name": "จำรัสฟาร์ม",
     "email": "mc@gmail.com",
     "passwordHash": "$2b$10$DlYLe8QYajeCbJyVwxGwfu.wNyI05pGlJqJysrHrmjP7FkGSjBjZy",
+    "emailVerified": true,
+    "otpCode": "",
+    "otpPurpose": "",
+    "otpExpiresAt": "",
     "role": "admin",
     "createdAt": "2026-03-21T14:15:13.149Z",
     "phone": "081-9911335",
@@ -62,6 +66,10 @@
     "name": "นงนุช",
     "email": "nuch@gmail.com",
     "passwordHash": "$2b$10$dknQpj9HqXWsgKCcaRqEP.tkx2VgK1Pp45d.k/pOve0M3mo0CumFm",
+    "emailVerified": true,
+    "otpCode": "",
+    "otpPurpose": "",
+    "otpExpiresAt": "",
     "role": "customer",
     "createdAt": "2026-04-22T23:26:00.086Z",
     "creatorEnabled": false,
@@ -89,6 +97,10 @@
     "name": "ต่ายขนมไทย",
     "email": "tay@gmail.com",
     "passwordHash": "$2b$10$9A9lFumqEmxFH/iU6JVe9OuLfzpUPJEowtkUlDTGvmTgE2D421lCG",
+    "emailVerified": true,
+    "otpCode": "",
+    "otpPurpose": "",
+    "otpExpiresAt": "",
     "role": "customer",
     "createdAt": "2026-04-23T21:33:05.826Z",
     "creatorEnabled": true,
@@ -116,5 +128,17 @@
       "postalCode": "15240",
       "note": ""
     }
+  },
+  {
+    "id": "user-1777550632063",
+    "name": "จอบละโว้",
+    "email": "root2552@gmail.com",
+    "passwordHash": "$2b$10$2GJVbnDpBxcpMvd/XJ0bheX6qYOB8MMVO48EEwVeIY9oPtvAlGLde",
+    "role": "customer",
+    "createdAt": "2026-04-30T12:03:52.063Z",
+    "emailVerified": true,
+    "otpCode": "",
+    "otpPurpose": "",
+    "otpExpiresAt": ""
   }
 ]
