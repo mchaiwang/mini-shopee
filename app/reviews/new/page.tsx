@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type OrderItem = {
@@ -59,7 +59,7 @@ type CurrentUser = {
   };
 };
 
-export default function CreatorNewReviewPage() {
+function CreatorNewReviewPageInner() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId") || "";
 
@@ -661,6 +661,14 @@ export default function CreatorNewReviewPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreatorNewReviewPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>
+      <CreatorNewReviewPageInner />
+    </Suspense>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
@@ -108,7 +108,7 @@ function renderStars(rating: number) {
   return "★".repeat(safeRating) + "☆".repeat(5 - safeRating);
 }
 
-export default function ProductSlugPage() {
+function ProductSlugPageInner() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -1549,6 +1549,14 @@ useEffect(() => {
       </div>
 
     </main>
+  );
+}
+
+export default function ProductSlugPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>
+      <ProductSlugPageInner />
+    </Suspense>
   );
 }
 
