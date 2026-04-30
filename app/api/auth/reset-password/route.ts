@@ -1,66 +1,17 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import bcrypt from "bcryptjs";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-const filePath = path.join(process.cwd(), "data/users.json");
 
 export async function POST(req: Request) {
   try {
-    const { email, otp, newPassword } = await req.json();
+    const { email, newPassword } = await req.json();
 
-    const cleanEmail = String(email || "").trim().toLowerCase();
-    const cleanOtp = String(otp || "").trim();
-    const password = String(newPassword || "");
+    // ⚠️ ตอนนี้ยังไม่เขียนลง users.json เพราะ Vercel เขียนไม่ได้
+    // เอาไว้หลังบ้านค่อยเปลี่ยนเป็น DB จริง
 
-    if (!cleanEmail || !cleanOtp || !password) {
-      return NextResponse.json(
-        { error: "กรุณากรอกข้อมูลให้ครบ" },
-        { status: 400 }
-      );
-    }
-
-    const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    const user = users.find(
-      (u: any) => String(u.email || "").trim().toLowerCase() === cleanEmail
-    );
-
-    if (!user) {
-      return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 400 });
-    }
-
-    if (user.otpPurpose !== "reset") {
-      return NextResponse.json(
-        { error: "OTP นี้ไม่ใช่สำหรับรีเซตรหัสผ่าน" },
-        { status: 400 }
-      );
-    }
-
-    if (String(user.otpCode || "") !== cleanOtp) {
-      return NextResponse.json({ error: "OTP ไม่ถูกต้อง" }, { status: 400 });
-    }
-
-    if (Date.now() > Number(user.otpExpiresAt || 0)) {
-      return NextResponse.json({ error: "OTP หมดอายุ" }, { status: 400 });
-    }
-
-    user.passwordHash = await bcrypt.hash(password, 10);
-    user.otpCode = "";
-    user.otpPurpose = "";
-    user.otpExpiresAt = "";
-    user.emailVerified = true;
-
-    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("RESET PASSWORD ERROR:", error);
-    return NextResponse.json(
-      { error: "รีเซตรหัสผ่านไม่สำเร็จ" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: "เปลี่ยนรหัสผ่านสำเร็จ (mock)",
+    });
+  } catch (err) {
+    return NextResponse.json({ error: "reset failed" }, { status: 500 });
   }
 }
