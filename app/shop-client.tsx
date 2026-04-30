@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
@@ -402,7 +402,7 @@ function ProductReviewsSection({
   );
 }
 
-export default function ShopClient() {
+function ShopClientInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const didHydrateCartRef = useRef(false);
@@ -1781,5 +1781,13 @@ searchText: [
         </div>
       </main>
     </>
+  );
+}
+
+export default function ShopClient() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>
+      <ShopClientInner />
+    </Suspense>
   );
 }
