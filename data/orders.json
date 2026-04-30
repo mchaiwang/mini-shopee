@@ -1,1 +1,102 @@
-[]
+[
+  {
+    "id": "ORD-1777559042629",
+    "userId": "user-1774102513149",
+    "ownerId": "user-1774102513149",
+    "email": "mc@gmail.com",
+    "fullName": "มีชัย หวังศุภกิจโกศล",
+    "phone": "081-9911335",
+    "address": "133 หมู่ 2  หัวลำ ท่าหลวง ลพบุรี  15230",
+    "note": "",
+    "items": [
+      {
+        "id": 1,
+        "name": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+        "slug": "fip-care-andrographis",
+        "price": 390,
+        "image": "/uploads/products/1774277559617-ADV2.jpg",
+        "images": [
+          "/uploads/products/1774277559617-ADV2.jpg",
+          "/uploads/products/1774277585129-467405182.jpg",
+          "/uploads/products/1774277595376-FIP.jpg"
+        ],
+        "shortDescription": "ทางเลือกในการรักษาแมว FIP",
+        "category": "สัตว์เลี้ยง > แมว > FIP",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/50UZQEu8ok?share_channel_code=6",
+        "active": true,
+        "featured": true,
+        "problemType": "fip",
+        "symptomTags": [
+          "ซึม",
+          "ไม่กินอาหาร",
+          "น้ำในท้อง",
+          "ไข้เรื้อรัง"
+        ],
+        "petTypes": [
+          "cat"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 99,
+        "seoTitle": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+        "seoDescription": "ทางเลือกในการรักษาแมว FIP",
+        "reviewStats": {
+          "videos": 2,
+          "views": 80,
+          "clicks": 10,
+          "orders": 3,
+          "conversionRate": 0.3
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": true,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติก",
+        "defaultReviewId": "review-1776503189213",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": [
+          "ทางเลือกในการรักษาแมว FIP",
+          "เหมาะสำหรับผู้เลี้ยงที่ต้องการข้อมูลประกอบการดูแลและต้องการปรึกษาเคสก่อนตัดสินใจ",
+          "แนะนำให้สังเกตอาการร่วม เช่น ซึม ไม่กินอาหาร ไข้เรื้อรัง ท้องโต หรือมีน้ำในช่องท้อง",
+          "ควรใช้ร่วมกับการดูแลทั่วไป เช่น แยกพักในพื้นที่สงบ ให้น้ำและอาหารเพียงพอ และติดตามอาการอย่างใกล้ชิด"
+        ],
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1,
+        "refReview": "review-1776948486287",
+        "creatorName": "สมหวังนะครับ"
+      }
+    ],
+    "total": 390,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "จัดส่งแล้ว",
+    "createdAt": "2026-04-30T14:24:02.629Z",
+    "shippingAddress": {
+      "fullName": "มีชัย หวังศุภกิจโกศล",
+      "phone": "081-9911335",
+      "email": "mc@gmail.com",
+      "address": "133 หมู่ 2  หัวลำ ท่าหลวง ลพบุรี  15230"
+    },
+    "refReview": "review-1776948486287",
+    "commissionTracked": false,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "",
+    "commissionStatus": ""
+  }
+]

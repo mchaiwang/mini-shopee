@@ -19,19 +19,6 @@ type AuthUser = {
   };
 };
 
-type WalletResponse = {
-  success?: boolean;
-  wallet?: {
-    unconfirmed?: number;
-    pending?: number;
-    requested?: number;
-    paid?: number;
-    total?: number;
-  };
-  withdraws?: WithdrawRecord[];
-  commissions?: CommissionRecord[];
-};
-
 type WithdrawCommissionItem = {
   id: string;
   orderId: string;
@@ -50,7 +37,6 @@ type WithdrawRecord = {
   amount: number;
   status: "requested" | "approved" | "paid" | "rejected" | string;
   createdAt: string;
-  /** snapshot ของ commission ที่ประกอบเป็น withdraw นี้ (ตั้งแต่ patch รุ่นใหม่) */
   items?: WithdrawCommissionItem[];
 };
 
@@ -64,12 +50,21 @@ type CommissionRecord = {
   commissionRate?: number;
   commissionAmount?: number;
   amount?: number;
-  status?: "pending" | "requested" | "approved" | "paid" | "rejected" | string;
+  status?: "pending" | "requested" | "approved" | "paid" | "rejected" | "unconfirmed" | string;
   createdAt?: string;
-  updatedAt?: string;
-  approvedAt?: string | null;
-  paidAt?: string | null;
-  paymentRef?: string | null;
+};
+
+type WalletResponse = {
+  success?: boolean;
+  wallet?: {
+    unconfirmed?: number;
+    pending?: number;
+    requested?: number;
+    paid?: number;
+    total?: number;
+  };
+  withdraws?: WithdrawRecord[];
+  commissions?: CommissionRecord[];
 };
 
 type OrderRecord = {
@@ -78,13 +73,7 @@ type OrderRecord = {
   refReview?: string;
   commissionTracked?: boolean;
   commissionAmount?: number;
-  commissionStatus?:
-    | "pending"
-    | "requested"
-    | "approved"
-    | "paid"
-    | "rejected"
-    | string;
+  commissionStatus?: string;
   commissionOwnerUserId?: string;
   createdAt?: string;
 };
@@ -151,7 +140,6 @@ function formatMoney(value?: number) {
 
 function formatThaiDate(value?: string) {
   if (!value) return "-";
-
   try {
     return new Date(value).toLocaleString("th-TH");
   } catch {
@@ -175,6 +163,7 @@ function getCommissionStatusText(status?: string) {
   if (status === "unconfirmed") return "รอลูกค้ารับของ";
   return "รอโอน";
 }
+
 function getCommissionAmount(item: CommissionRecord) {
   const directAmount = Number(item.commissionAmount ?? item.amount ?? 0);
   if (directAmount > 0) return directAmount;
@@ -188,21 +177,9 @@ function getCommissionAmount(item: CommissionRecord) {
 function getCommissionSaleAmount(item: CommissionRecord) {
   return Number(item.saleAmount || 0);
 }
-/**
- * คืนรายการ commission ที่ประกอบเป็น withdraw record นี้
- *
- * ลำดับความสำคัญ:
- * 1. ถ้า withdraw.items มีอยู่ (จาก backend ใหม่) — ใช้ snapshot นั้น (แม่นยำที่สุด)
- * 2. ถ้าไม่มี (record เก่า ก่อน patch) — คืน [] เพื่อให้ UI แสดงข้อความ "ข้อมูลย้อนหลังไม่ครบ"
- *    เพราะการ filter จาก commission ทั้งหมดด้วย status เดียวกัน ทำให้ทุก withdraw
- *    ที่ status เดียวกันแสดง commission ซ้ำกัน — ผิด
- */
-function commissionsFromWithdraw(
-  withdraw: WithdrawRecord,
-  _commissions: CommissionRecord[]
-): CommissionRecord[] {
+
+function commissionsFromWithdraw(withdraw: WithdrawRecord): CommissionRecord[] {
   if (Array.isArray(withdraw.items) && withdraw.items.length > 0) {
-    // ใช้ snapshot ที่บันทึกไว้ตอนกดถอน
     return withdraw.items.map((item) => ({
       id: item.id,
       orderId: item.orderId,
@@ -243,7 +220,7 @@ export default function FinancePage() {
 
   const [popup, setPopup] = useState<PopupState>(null);
   const [walletDetail, setWalletDetail] = useState<WalletDetailType>(null);
-  const [selectedWithdraw,setSelectedWithdraw] = useState<WithdrawRecord|null>(null);
+  const [selectedWithdraw, setSelectedWithdraw] = useState<WithdrawRecord | null>(null);
 
   const seenOrderIdsRef = useRef<Set<string>>(new Set());
   const popupTimerRef = useRef<number | null>(null);
@@ -275,27 +252,6 @@ export default function FinancePage() {
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }, [creatorCommissions]);
 
-  const selectedWithdraws = useMemo(() => {
-    // unconfirmed ไม่ใช่สถานะของ withdraw — return [] เพื่อไม่แสดง withdraw history
-    if (walletDetail === "unconfirmed") {
-      return [];
-    }
-
-    if (!walletDetail || walletDetail === "pending" || walletDetail === "total") {
-      return withdraws;
-    }
-
-    if (walletDetail === "approved") {
-      return withdraws.filter((item) => item.status === "approved");
-    }
-
-    if (walletDetail === "paid") {
-      return withdraws.filter((item) => item.status === "paid");
-    }
-
-    return withdraws;
-  }, [walletDetail, withdraws]);
-
   const approvedCommissions = useMemo(() => {
     return creatorCommissions
       .filter((item) => {
@@ -311,18 +267,26 @@ export default function FinancePage() {
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }, [creatorCommissions]);
 
+  const selectedWithdraws = useMemo(() => {
+    if (walletDetail === "unconfirmed") return [];
+    if (!walletDetail || walletDetail === "pending" || walletDetail === "total") return withdraws;
+    if (walletDetail === "approved") return withdraws.filter((item) => item.status === "approved");
+    if (walletDetail === "paid") return withdraws.filter((item) => item.status === "paid");
+    return withdraws;
+  }, [walletDetail, withdraws]);
+
   const derivedWallet = {
-  unconfirmed: wallet?.unconfirmed || 0,
-  pending: wallet?.pending || 0,
-  requested: wallet?.requested || 0,
-  approved: wallet?.requested || 0,
-  paid: wallet?.paid || 0,
-  total:
-    (wallet?.unconfirmed || 0) +
-    (wallet?.pending || 0) +
-    (wallet?.requested || 0) +
-    (wallet?.paid || 0),
-};
+    unconfirmed: wallet?.unconfirmed || 0,
+    pending: wallet?.pending || 0,
+    requested: wallet?.requested || 0,
+    approved: wallet?.requested || 0,
+    paid: wallet?.paid || 0,
+    total:
+      (wallet?.unconfirmed || 0) +
+      (wallet?.pending || 0) +
+      (wallet?.requested || 0) +
+      (wallet?.paid || 0),
+  };
 
   async function loadCreatorOrders(userId?: string) {
     try {
@@ -363,10 +327,9 @@ export default function FinancePage() {
 
       if (rawAuth) {
         try {
-          const parsed = JSON.parse(rawAuth);
-          setUser(parsed);
+          setUser(JSON.parse(rawAuth));
         } catch {
-          // ignore parse error
+          // ignore
         }
       }
 
@@ -443,11 +406,7 @@ export default function FinancePage() {
       const mine = allReviews
         .filter((item) => String(item.userId || "") === String(userId))
         .filter((item) => item.reviewType === "creator_slide")
-        .sort((a, b) => {
-          const aTime = new Date(a.createdAt || 0).getTime();
-          const bTime = new Date(b.createdAt || 0).getTime();
-          return bTime - aTime;
-        });
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
       setMyReviews(mine);
     } catch (error) {
@@ -511,9 +470,7 @@ export default function FinancePage() {
           if (id) initialIds.add(id);
         }
 
-        if (!cancelled) {
-          seenOrderIdsRef.current = initialIds;
-        }
+        if (!cancelled) seenOrderIdsRef.current = initialIds;
       } catch (error) {
         console.error("seedInitialOrders error:", error);
       }
@@ -553,15 +510,9 @@ export default function FinancePage() {
           const amount = Number(order?.commissionAmount || 0);
 
           if (review && amount > 0) {
-            if (popupTimerRef.current) {
-              window.clearTimeout(popupTimerRef.current);
-            }
+            if (popupTimerRef.current) window.clearTimeout(popupTimerRef.current);
 
-            setPopup({
-              amount,
-              review,
-              orderId,
-            });
+            setPopup({ amount, review, orderId });
 
             popupTimerRef.current = window.setTimeout(() => {
               setPopup(null);
@@ -578,10 +529,7 @@ export default function FinancePage() {
 
     return () => {
       window.clearInterval(interval);
-
-      if (popupTimerRef.current) {
-        window.clearTimeout(popupTimerRef.current);
-      }
+      if (popupTimerRef.current) window.clearTimeout(popupTimerRef.current);
     };
   }, []);
 
@@ -591,10 +539,7 @@ export default function FinancePage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `ยืนยันการถอนเงิน ${formatMoney(derivedWallet.pending)} ?`
-    );
-
+    const confirmed = window.confirm(`ยืนยันการถอนเงิน ${formatMoney(derivedWallet.pending)} ?`);
     if (!confirmed) return;
 
     try {
@@ -629,13 +574,10 @@ export default function FinancePage() {
     try {
       setDeletingReviewId(reviewId);
 
-      const res = await fetch(
-        `/api/reviews?id=${encodeURIComponent(reviewId)}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        }
-      );
+      const res = await fetch(`/api/reviews?id=${encodeURIComponent(reviewId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
       const data = await res.json().catch(() => null);
 
@@ -659,22 +601,20 @@ export default function FinancePage() {
     return matched?.name || "-";
   };
 
- const goToEditReview = (review: CreatorReview) => {
-  const reviewId = String(review?.id || "").trim();
+  const goToEditReview = (review: CreatorReview) => {
+    const reviewId = String(review?.id || "").trim();
 
-  if (!reviewId) {
-    alert("ไม่พบรหัสรีวิว");
-    return;
-  }
+    if (!reviewId) {
+      alert("ไม่พบรหัสรีวิว");
+      return;
+    }
 
-  // ใช้ review.id เท่านั้น ห้ามเด้งไป orderId
-  window.location.href =
-    `/creator/reviews/new?reviewId=${encodeURIComponent(reviewId)}`;
-};
+    window.location.href = `/creator/reviews/new?reviewId=${encodeURIComponent(reviewId)}`;
+  };
 
   const getWalletDetailTitle = () => {
-    if (walletDetail === "unconfirmed") return "คอมมิสชั่นที่รอลูกค้ายืนยันรับของ";
-    if (walletDetail === "pending") return "คอมมิสชั่นที่ลูกค้าได้รับของแล้ว";
+    if (walletDetail === "unconfirmed") return "คอมมิชชั่นที่รอลูกค้ายืนยันรับของ";
+    if (walletDetail === "pending") return "คอมมิชชั่นที่ลูกค้าได้รับของแล้ว";
     if (walletDetail === "approved") return "รายละเอียดยอดรอรับโอน";
     if (walletDetail === "paid") return "รายละเอียดยอดโอนแล้ว";
     return "รายละเอียดยอดรวมทั้งหมด";
@@ -682,15 +622,15 @@ export default function FinancePage() {
 
   const getWalletDetailDescription = () => {
     if (walletDetail === "unconfirmed") {
-      return "ยอดนี้คือคอมมิชชั่นจากออเดอร์ที่ยังอยู่ในขั้นตอนการจัดส่ง — เมื่อลูกค้ายืนยันว่าได้รับสินค้าแล้ว ยอดจะย้ายไปการ์ด \"ยืนยันแล้ว\" และพร้อมส่งคำขอถอน";
+      return "ยอดนี้คือคอมมิชชั่นจากออเดอร์ที่ยังอยู่ในขั้นตอนการจัดส่ง เมื่อลูกค้ายืนยันว่าได้รับสินค้าแล้ว ยอดจะย้ายไปยืนยันแล้ว";
     }
 
     if (walletDetail === "pending") {
-      return "ยอดนี้คือเงินคอมมิชชั่นที่ลูกค้ายืนยันรับของแล้ว — พร้อมส่งคำขอถอน";
+      return "ยอดนี้คือเงินคอมมิชชั่นที่ลูกค้ายืนยันรับของแล้ว พร้อมส่งคำขอถอน";
     }
 
     if (walletDetail === "approved") {
-      return "ยอดนี้คือเงินคอมมิชชั่นที่ได้รับอนุมัติแล้ว แสดงแยกตามรีวิวและออเดอร์ด้านล่าง";
+      return "ยอดนี้คือเงินคอมมิชชั่นที่ได้รับอนุมัติแล้ว แสดงแยกตามรีวิวและออเดอร์";
     }
 
     if (walletDetail === "paid") {
@@ -700,574 +640,244 @@ export default function FinancePage() {
     return "ยอดนี้คือยอดรวมของเครดิตทุกสถานะ ทั้งรอยืนยัน รอโอน รอตรวจสอบ และโอนแล้ว";
   };
 
+  const walletDetailAmount =
+    walletDetail === "unconfirmed"
+      ? derivedWallet.unconfirmed
+      : walletDetail === "pending"
+        ? derivedWallet.pending
+        : walletDetail === "approved"
+          ? derivedWallet.approved
+          : walletDetail === "paid"
+            ? derivedWallet.paid
+            : derivedWallet.total;
+
   if (loading) {
     return (
-      <div
-        style={{
-          maxWidth: 1320,
-          margin: "24px auto",
-          padding: "0 16px",
-        }}
-      >
-        <div style={loadingBoxStyle}>กำลังโหลดข้อมูล...</div>
+      <div className="finance-page">
+        <div className="loading-box">กำลังโหลดข้อมูล...</div>
+        <FinanceStyles />
       </div>
     );
   }
 
   return (
     <>
-      <div
-        style={{
-          maxWidth: 1320,
-          margin: "24px auto",
-          padding: "0 16px 40px",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "260px minmax(0, 1fr)",
-            gap: 20,
-            alignItems: "start",
-          }}
-        >
-          <aside style={sidebarStyle}>
-            <div style={sidebarTitleStyle}>เมนูครีเอเตอร์</div>
+      <div className="finance-page">
+        <div className="finance-shell">
+          <aside className="creator-sidebar">
+            <div className="sidebar-title">เมนูครีเอเตอร์</div>
 
-            <a href="/account/finance" style={activeMenuItemStyle}>
+            <a href="/account/finance" className="menu-item active">
               <span>🪙</span>
               <span>ภาพรวมการเงิน</span>
             </a>
 
-            <a href="#withdraw-section" style={menuItemStyle}>
+            <a href="#withdraw-section" className="menu-item">
               <span>💸</span>
               <span>ถอนเงิน</span>
             </a>
 
-            <a href="#withdraw-history-section" style={menuItemStyle}>
+            <a href="#withdraw-history-section" className="menu-item">
               <span>🧾</span>
               <span>ประวัติการถอนเงิน</span>
             </a>
 
-            <a href="#reviews-section" style={menuItemStyle}>
+            <a href="#reviews-section" className="menu-item">
               <span>⭐</span>
               <span>รีวิวของฉัน</span>
             </a>
 
-            <a href="/profile" style={menuItemStyle}>
+            <a href="/profile" className="menu-item">
               <span>👤</span>
               <span>ข้อมูลครีเอเตอร์</span>
             </a>
 
-            <div style={helpBoxStyle}>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>
-                ต้องการความช่วยเหลือ?
-              </div>
-              <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>
-                จัดการข้อมูลครีเอเตอร์ การเงิน และรีวิวได้จากหน้านี้
-              </div>
+            <div className="help-box">
+              <b>ต้องการความช่วยเหลือ?</b>
+              <span>จัดการข้อมูลครีเอเตอร์ การเงิน และรีวิวได้จากหน้านี้</span>
             </div>
           </aside>
 
-          <main>
+          <main className="finance-main">
             {!isCreatorApproved ? (
-              <div style={notCreatorBoxStyle}>
+              <div className="not-creator-box">
                 บัญชีนี้ยังไม่ได้รับสิทธิ์ครีเอเตอร์
                 <br />
                 กรุณาไปที่หน้าโปรไฟล์เพื่อสมัครครีเอเตอร์ก่อน
               </div>
             ) : (
               <>
-                <section style={heroCardStyle}>
-                  <div style={heroRowStyle}>
-                    <div style={heroLeftStyle}>
-                      <div style={heroIconWrapStyle}>🌿</div>
-                      <div>
-                        <div style={heroTitleStyle}>✅ คุณเป็นครีเอเตอร์แล้ว</div>
-                        <div style={heroTextStyle}>
-                          ยินดีด้วย!
-                          บัญชีของคุณได้รับการอนุมัติเป็นครีเอเตอร์เรียบร้อยแล้ว
-                          <br />
-                          ชื่อที่แสดง: {creatorDisplayNameText}
-                        </div>
-                      </div>
+                <section className="hero-card">
+                  <div className="hero-left">
+                    <div className="hero-icon">🌿</div>
+                    <div>
+                      <h1>✅ คุณเป็นครีเอเตอร์แล้ว</h1>
+                      <p>
+                        ยินดีด้วย! บัญชีของคุณได้รับการอนุมัติเป็นครีเอเตอร์เรียบร้อยแล้ว
+                        <br />
+                        ชื่อที่แสดง: {creatorDisplayNameText}
+                      </p>
                     </div>
-
-                    <a href="/profile" style={heroActionButtonStyle}>
-                      ดูโปรไฟล์ครีเอเตอร์
-                    </a>
                   </div>
+
+                  <a href="/profile" className="hero-btn">
+                    ดูโปรไฟล์ครีเอเตอร์
+                  </a>
                 </section>
 
-                <section style={walletGridStyle}>
-                  <button
-                    type="button"
+                <section className="wallet-grid">
+                  <WalletCard
+                    className="wallet-gray"
+                    label="รอยืนยัน"
+                    value={formatMoney(derivedWallet.unconfirmed)}
+                    sub="ลูกค้ายังไม่ยืนยันรับของ"
+                    hint="กดดูรายละเอียด"
                     onClick={() => setWalletDetail("unconfirmed")}
-                    style={grayCardButtonStyle}
-                  >
-                    <div style={cardLabelStyle}>รอยืนยัน</div>
-                    <div style={cardValueStyle}>
-                      {formatMoney(derivedWallet.unconfirmed)}
-                    </div>
-                    <div style={cardSubStyle}>ลูกค้ายังไม่ยืนยันรับของ</div>
-                    <div style={clickHintStyle}>กดดูรายละเอียด</div>
-                  </button>
+                  />
 
-                  <button
-                    type="button"
+                  <WalletCard
+                    className="wallet-orange"
+                    label="ยืนยันแล้ว (ถอนได้)"
+                    value={formatMoney(derivedWallet.pending)}
+                    sub="พร้อมส่งคำขอถอน"
+                    hint="กดดูรายละเอียดจากรีวิว"
                     onClick={() => setWalletDetail("pending")}
-                    style={orangeCardButtonStyle}
-                  >
-                    <div style={cardLabelStyle}>ยืนยันแล้ว (ถอนได้)</div>
-                    <div style={cardValueStyle}>
-                      {formatMoney(derivedWallet.pending)}
-                    </div>
-                    <div style={cardSubStyle}>พร้อมส่งคำขอถอน</div>
-                    <div style={clickHintStyle}>กดดูรายละเอียดจากรีวิว</div>
-                  </button>
+                  />
 
-                  <button
-                    type="button"
+                  <WalletCard
+                    className="wallet-blue"
+                    label="ยอดรอรับโอน"
+                    value={formatMoney(derivedWallet.approved)}
+                    sub="แอดมินอนุมัติแล้ว"
+                    hint="กดดูรายละเอียด"
                     onClick={() => setWalletDetail("approved")}
-                    style={blueCardButtonStyle}
-                  >
-                    <div style={cardLabelStyle}>ยอดรอรับโอน</div>
-                    <div style={cardValueStyle}>
-                      {formatMoney(derivedWallet.approved)}
-                    </div>
-                    <div style={cardSubStyle}>แอดมินอนุมัติแล้ว</div>
-                    <div style={clickHintStyle}>กดดูรายละเอียด</div>
-                  </button>
+                  />
 
-                  <button
-                    type="button"
+                  <WalletCard
+                    className="wallet-green"
+                    label="ยอดโอนแล้ว"
+                    value={formatMoney(derivedWallet.paid)}
+                    sub="รับเงินแล้วทั้งหมด"
+                    hint="กดดูรายละเอียด"
                     onClick={() => setWalletDetail("paid")}
-                    style={greenCardButtonStyle}
-                  >
-                    <div style={cardLabelStyle}>ยอดโอนแล้ว</div>
-                    <div style={cardValueStyle}>{formatMoney(derivedWallet.paid)}</div>
-                    <div style={cardSubStyle}>รับเงินแล้วทั้งหมด</div>
-                    <div style={clickHintStyle}>กดดูรายละเอียด</div>
-                  </button>
+                  />
 
-                  <button
-                    type="button"
+                  <WalletCard
+                    className="wallet-dark"
+                    label="ยอดรวมทั้งหมด"
+                    value={formatMoney(derivedWallet.total)}
+                    sub="รวมทุกสถานะ"
+                    hint="กดดูรายละเอียด"
                     onClick={() => setWalletDetail("total")}
-                    style={darkCardButtonStyle}
-                  >
-                    <div style={cardLabelStyle}>ยอดรวมทั้งหมด</div>
-                    <div style={cardValueStyle}>{formatMoney(derivedWallet.total)}</div>
-                    <div style={cardSubStyle}>รวมทุกสถานะ</div>
-                    <div style={clickHintStyle}>กดดูรายละเอียด</div>
-                  </button>
+                  />
                 </section>
 
                 {walletDetail ? (
-                  <section style={detailCardStyle}>
-                    <div style={detailHeaderStyle}>
+                  <section className="section-card detail-card">
+                    <div className="detail-head">
                       <div>
-                        <div style={sectionTitleStyle}>
-                          {getWalletDetailTitle()}
-                        </div>
-                        <div style={detailDescriptionStyle}>
-                          {getWalletDetailDescription()}
-                        </div>
+                        <h2>{getWalletDetailTitle()}</h2>
+                        <p>{getWalletDetailDescription()}</p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setWalletDetail(null)}
-                        style={closeDetailButtonStyle}
-                      >
+                      <button type="button" onClick={() => setWalletDetail(null)} className="light-btn">
                         ปิด
                       </button>
                     </div>
 
-                    <div style={detailAmountStyle}>
-                      {formatMoney(derivedWallet[walletDetail])}
-                    </div>
+                    <div className="detail-amount">{formatMoney(walletDetailAmount)}</div>
 
                     {walletDetail === "unconfirmed" ? (
-                      <div style={{ marginTop: 18 }}>
-                        <div style={miniTitleStyle}>
-                          รายการคอมมิชชั่นรอลูกค้ายืนยันรับของ
-                        </div>
-
-                        {unconfirmedCommissions.length === 0 ? (
-                          <div style={emptyBoxStyle}>
-                            ไม่มีออเดอร์ที่กำลังจัดส่ง — เมื่อมีลูกค้าสั่งซื้อจากรีวิวและยังไม่ได้รับของ ยอดจะแสดงที่นี่
-                          </div>
-                        ) : (
-                          <div style={{ display: "grid", gap: 12 }}>
-                            {unconfirmedCommissions.map((commission) => {
-                              const reviewId = String(commission.reviewId || "-");
-                              const reviewTitle =
-                                reviewTitleMap.get(reviewId) || reviewId;
-                              return (
-                                <div key={commission.id} style={commissionRowStyle}>
-                                  <div>
-                                    <div style={commissionTitleStyle}>
-                                      รีวิว: {reviewTitle}
-                                    </div>
-                                    <div style={commissionMetaStyle}>
-                                      Order: {commission.orderId}
-                                    </div>
-                                    <div style={commissionMetaStyle}>
-                                      Product: {commission.productId}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <div style={rowLabelStyle}>ยอดขาย</div>
-                                    <div style={rowValueStyle}>
-                                      {formatMoney(getCommissionSaleAmount(commission))}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <div style={rowLabelStyle}>คอม</div>
-                                    <div style={commissionAmountStyle}>
-                                      {formatMoney(getCommissionAmount(commission))}
-                                    </div>
-                                  </div>
-                                  <div
-                                    style={{
-                                      ...statusBadgeStyle,
-                                      background: "#f1f5f9",
-                                      color: "#475569",
-                                      borderColor: "#cbd5e1",
-                                    }}
-                                  >
-                                    🚚 รอลูกค้ายืนยันรับของ
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                      <CommissionList
+                        title="รายการคอมมิชชั่นรอลูกค้ายืนยันรับของ"
+                        emptyText="ไม่มีออเดอร์ที่กำลังจัดส่ง"
+                        commissions={unconfirmedCommissions}
+                        reviewTitleMap={reviewTitleMap}
+                        badgeText="🚚 รอลูกค้ายืนยันรับของ"
+                        badgeClass="badge-gray"
+                      />
                     ) : null}
 
                     {walletDetail === "pending" ? (
-                      <div style={{ marginTop: 18 }}>
-                        <div style={miniTitleStyle}>
-                          รายการคอมมิชชั่นรอโอนจากรีวิว
-                        </div>
-
-                        {pendingCommissions.length === 0 ? (
-                          <div style={emptyBoxStyle}>
-                            ยังไม่พบรายการรีวิวที่สร้างคอมมิชชั่นรอโอน
-                          </div>
-                        ) : (
-                          <div style={{ display: "grid", gap: 12 }}>
-                            {pendingCommissions.map((commission) => {
-                              const reviewId = String(commission.reviewId || "-");
-                              const reviewTitle =
-                                reviewTitleMap.get(reviewId) || reviewId;
-
-                              return (
-                                <div
-                                  key={String(commission.id || reviewId)}
-                                  style={commissionRowStyle}
-                                >
-                                  <div>
-                                    <div style={commissionTitleStyle}>
-                                      รีวิว: {reviewTitle}
-                                    </div>
-                                    <div style={commissionMetaStyle}>
-                                      Review ID: {reviewId}
-                                    </div>
-                                    <div style={commissionMetaStyle}>
-                                      Order ID: {commission.orderId || "-"}
-                                    </div>
-                                    <div style={commissionMetaStyle}>
-                                      วันที่: {formatThaiDate(commission.createdAt)}
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <div style={rowLabelStyle}>ยอดขาย</div>
-                                    <div style={rowValueStyle}>
-                                      {formatMoney(getCommissionSaleAmount(commission))}
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <div style={rowLabelStyle}>คอมมิชชั่น</div>
-                                    <div style={commissionAmountStyle}>
-                                      {formatMoney(getCommissionAmount(commission))}
-                                    </div>
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      ...statusBadgeStyle,
-                                      background: "#fff7ed",
-                                      color: "#9a3412",
-                                      borderColor: "#fdba74",
-                                    }}
-                                  >
-                                    {getCommissionStatusText(
-                                      commission.status
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                      <CommissionList
+                        title="รายการคอมมิชชั่นรอโอนจากรีวิว"
+                        emptyText="ยังไม่พบรายการรีวิวที่สร้างคอมมิชชั่นรอโอน"
+                        commissions={pendingCommissions}
+                        reviewTitleMap={reviewTitleMap}
+                        badgeText="รอโอน"
+                        badgeClass="badge-orange"
+                      />
                     ) : null}
 
-                    {walletDetail !== "pending" ? (
-                      <div style={{ marginTop: 18 }}>
-                        <div style={miniTitleStyle}>
-                          {walletDetail === "paid"
-                            ? "รายการคอมมิชชั่นที่โอนแล้ว"
-                            : walletDetail === "approved"
-                              ? "รายการคอมมิชชั่นที่ได้รับอนุมัติ"
-                              : "รายการที่เกี่ยวข้อง"}
-                        </div>
+                    {walletDetail === "approved" ? (
+                      <CommissionList
+                        title="รายการคอมมิชชั่นที่ได้รับอนุมัติ"
+                        emptyText="ยังไม่มีรายการคอมมิชชั่นที่ได้รับอนุมัติ"
+                        commissions={approvedCommissions}
+                        reviewTitleMap={reviewTitleMap}
+                        badgeText="ได้รับอนุมัติ"
+                        badgeClass="badge-blue"
+                      />
+                    ) : null}
 
-                        {walletDetail === "paid" ? (
-                          paidCommissions.length === 0 &&
-                          selectedWithdraws.length === 0 ? (
-                            <div style={emptyBoxStyle}>
-                              ยังไม่มีรายการคอมมิชชั่นที่โอนแล้ว
-                            </div>
-                          ) : (
-                            <div style={{ display: "grid", gap: 12 }}>
-                              {paidCommissions.map((commission) => {
-                                const reviewId = String(commission.reviewId || "-");
-                                const reviewTitle =
-                                  reviewTitleMap.get(reviewId) || reviewId;
+                    {walletDetail === "paid" ? (
+                      <CommissionList
+                        title="รายการคอมมิชชั่นที่โอนแล้ว"
+                        emptyText="ยังไม่มีรายการคอมมิชชั่นที่โอนแล้ว"
+                        commissions={paidCommissions}
+                        reviewTitleMap={reviewTitleMap}
+                        badgeText="โอนแล้ว"
+                        badgeClass="badge-green"
+                      />
+                    ) : null}
 
-                                return (
-                                  <div
-                                    key={String(commission.id || reviewId)}
-                                    style={commissionRowStyle}
-                                  >
-                                    <div>
-                                      <div style={commissionTitleStyle}>
-                                        รีวิว: {reviewTitle}
-                                      </div>
-                                      <div style={commissionMetaStyle}>
-                                        Review ID: {reviewId}
-                                      </div>
-                                      <div style={commissionMetaStyle}>
-                                        Order ID: {commission.orderId || "-"}
-                                      </div>
-                                      <div style={commissionMetaStyle}>
-                                        วันที่: {formatThaiDate(commission.createdAt)}
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <div style={rowLabelStyle}>ยอดขาย</div>
-                                      <div style={rowValueStyle}>
-                                        {formatMoney(getCommissionSaleAmount(commission))}
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <div style={rowLabelStyle}>คอมมิชชั่น</div>
-                                      <div style={commissionAmountStyle}>
-                                        {formatMoney(getCommissionAmount(commission))}
-                                      </div>
-                                    </div>
-
-                                    <div
-                                      style={{
-                                        ...statusBadgeStyle,
-                                        background: "#ecfdf5",
-                                        color: "#166534",
-                                        borderColor: "#86efac",
-                                      }}
-                                    >
-                                      โอนแล้ว
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {selectedWithdraws.map((item) => (
-                                <div key={item.id} style={miniWithdrawRowStyle}>
-                                  <div>
-                                    <div style={miniWithdrawIdStyle}>
-                                      {item.id}
-                                    </div>
-                                    <div style={miniWithdrawDateStyle}>
-                                      {formatThaiDate(item.createdAt)}
-                                    </div>
-                                  </div>
-
-                                  <div style={miniWithdrawAmountStyle}>
-                                    {formatMoney(item.amount)}
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      ...statusBadgeStyle,
-                                      background: "#ecfdf5",
-                                      color: "#166534",
-                                      borderColor: "#86efac",
-                                    }}
-                                  >
-                                    {getWithdrawStatusText(item.status)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )
-                        ) : walletDetail === "approved" ? (
-                          approvedCommissions.length === 0 ? (
-                            <div style={emptyBoxStyle}>
-                              ยังไม่มีรายการคอมมิชชั่นที่ได้รับอนุมัติ
-                            </div>
-                          ) : (
-                            <div style={{ display: "grid", gap: 12 }}>
-                              {approvedCommissions.map((commission) => {
-                                const reviewId = String(commission.reviewId || "-");
-                                const reviewTitle =
-                                  reviewTitleMap.get(reviewId) || reviewId;
-
-                                return (
-                                  <div
-                                    key={String(commission.id || reviewId)}
-                                    style={commissionRowStyle}
-                                  >
-                                    <div>
-                                      <div style={commissionTitleStyle}>
-                                        รีวิว: {reviewTitle}
-                                      </div>
-                                      <div style={commissionMetaStyle}>
-                                        Review ID: {reviewId}
-                                      </div>
-                                      <div style={commissionMetaStyle}>
-                                        Order ID: {commission.orderId || "-"}
-                                      </div>
-                                      <div style={commissionMetaStyle}>
-                                        วันที่: {formatThaiDate(commission.createdAt)}
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <div style={rowLabelStyle}>ยอดขาย</div>
-                                      <div style={rowValueStyle}>
-                                        {formatMoney(getCommissionSaleAmount(commission))}
-                                      </div>
-                                    </div>
-
-                                    <div>
-                                      <div style={rowLabelStyle}>คอมมิชชั่น</div>
-                                      <div style={commissionAmountStyle}>
-                                        {formatMoney(getCommissionAmount(commission))}
-                                      </div>
-                                    </div>
-
-                                    <div
-                                      style={{
-                                        ...statusBadgeStyle,
-                                        background: "#eff6ff",
-                                        color: "#1d4ed8",
-                                        borderColor: "#93c5fd",
-                                      }}
-                                    >
-                                      ได้รับอนุมัติ
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )
-                        ) : selectedWithdraws.length === 0 ? (
-                          <div style={emptyBoxStyle}>
-                            ยังไม่มีรายการในสถานะนี้
-                          </div>
+                    {walletDetail === "total" ? (
+                      <div className="detail-block">
+                        <h3>รายการที่เกี่ยวข้อง</h3>
+                        {selectedWithdraws.length === 0 ? (
+                          <div className="empty-box">ยังไม่มีรายการในสถานะนี้</div>
                         ) : (
-                          <div style={{ display: "grid", gap: 10 }}>
+                          <div className="list-grid">
                             {selectedWithdraws.map((item) => (
-                              <div key={item.id} style={miniWithdrawRowStyle}>
-                                <div>
-                                  <div style={miniWithdrawIdStyle}>
-                                    {item.id}
-                                  </div>
-                                  <div style={miniWithdrawDateStyle}>
-                                    {formatThaiDate(item.createdAt)}
-                                  </div>
-                                </div>
-
-                                <div style={miniWithdrawAmountStyle}>
-                                  {formatMoney(item.amount)}
-                                </div>
-
-                                <div
-                                  style={{
-                                    ...statusBadgeStyle,
-                                    background:
-                                      item.status === "paid"
-                                        ? "#ecfdf5"
-                                        : item.status === "rejected"
-                                          ? "#fef2f2"
-                                          : "#fff7ed",
-                                    color:
-                                      item.status === "paid"
-                                        ? "#166534"
-                                        : item.status === "rejected"
-                                          ? "#991b1b"
-                                          : "#9a3412",
-                                    borderColor:
-                                      item.status === "paid"
-                                        ? "#86efac"
-                                        : item.status === "rejected"
-                                          ? "#fca5a5"
-                                          : "#fdba74",
-                                  }}
-                                >
-                                  {getWithdrawStatusText(item.status)}
-                                </div>
-                              </div>
+                              <WithdrawMiniRow key={item.id} item={item} />
                             ))}
                           </div>
                         )}
                       </div>
-                   ) : null}
+                    ) : null}
                   </section>
                 ) : null}
 
-                <section id="withdraw-section" style={sectionCardStyle}>
-                  <div style={sectionTitleStyle}>วิธีรับเงินปัจจุบัน</div>
+                <section id="withdraw-section" className="section-card">
+                  <h2>วิธีรับเงินปัจจุบัน</h2>
 
-                  <div style={paymentBoxStyle}>
-                    <div style={paymentRowStyle}>
-                      <strong>ชื่อครีเอเตอร์:</strong>{" "}
-                      {user?.creatorDisplayName || "-"}
+                  <div className="payment-box">
+                    <div>
+                      <b>ชื่อครีเอเตอร์:</b> {user?.creatorDisplayName || "-"}
                     </div>
 
                     {user?.creatorPayment?.promptPay ? (
                       <>
-                        <div style={paymentRowStyle}>
-                          <strong>ประเภท:</strong> พร้อมเพย์
+                        <div>
+                          <b>ประเภท:</b> พร้อมเพย์
                         </div>
-                        <div style={paymentRowStyle}>
-                          <strong>พร้อมเพย์:</strong>{" "}
-                          {user.creatorPayment.promptPay || "-"}
+                        <div>
+                          <b>พร้อมเพย์:</b> {user.creatorPayment.promptPay || "-"}
                         </div>
                       </>
                     ) : (
                       <>
-                        <div style={paymentRowStyle}>
-                          <strong>ประเภท:</strong> โอนธนาคาร
+                        <div>
+                          <b>ประเภท:</b> โอนธนาคาร
                         </div>
-                        <div style={paymentRowStyle}>
-                          <strong>ธนาคาร:</strong>{" "}
-                          {user?.creatorPayment?.bankName || "-"}
+                        <div>
+                          <b>ธนาคาร:</b> {user?.creatorPayment?.bankName || "-"}
                         </div>
-                        <div style={paymentRowStyle}>
-                          <strong>ชื่อบัญชี:</strong>{" "}
-                          {user?.creatorPayment?.accountName || "-"}
+                        <div>
+                          <b>ชื่อบัญชี:</b> {user?.creatorPayment?.accountName || "-"}
                         </div>
-                        <div style={paymentRowStyle}>
-                          <strong>เลขบัญชี:</strong>{" "}
-                          {user?.creatorPayment?.accountNumber || "-"}
+                        <div>
+                          <b>เลขบัญชี:</b> {user?.creatorPayment?.accountNumber || "-"}
                         </div>
                       </>
                     )}
@@ -1276,28 +886,7 @@ export default function FinancePage() {
                   <button
                     onClick={handleWithdraw}
                     disabled={withdrawing || derivedWallet.pending <= 0}
-                    style={{
-                      marginTop: 18,
-                      height: 56,
-                      width: "100%",
-                      borderRadius: 16,
-                      border: "none",
-                      background:
-                        withdrawing || derivedWallet.pending <= 0
-                          ? "#cbd5e1"
-                          : "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)",
-                      color: "#fff",
-                      fontWeight: 900,
-                      fontSize: 18,
-                      cursor:
-                        withdrawing || derivedWallet.pending <= 0
-                          ? "not-allowed"
-                          : "pointer",
-                      boxShadow:
-                        withdrawing || derivedWallet.pending <= 0
-                          ? "none"
-                          : "0 12px 24px rgba(238,77,45,0.18)",
-                    }}
+                    className="withdraw-btn"
                   >
                     {withdrawing
                       ? "กำลังส่งคำขอถอน..."
@@ -1305,69 +894,34 @@ export default function FinancePage() {
                   </button>
                 </section>
 
-                <section id="withdraw-history-section" style={sectionCardStyle}>
-                  <div style={sectionTitleStyle}>ประวัติการถอนเงิน</div>
+                <section id="withdraw-history-section" className="section-card">
+                  <h2>ประวัติการถอนเงิน</h2>
 
                   {withdraws.length === 0 ? (
-                    <div style={emptyBoxStyle}>ยังไม่มีประวัติการถอนเงิน</div>
+                    <div className="empty-box">ยังไม่มีประวัติการถอนเงิน</div>
                   ) : (
-                    <div style={{ display: "grid", gap: 12 }}>
+                    <div className="list-grid">
                       {withdraws.map((item) => (
-                        <div key={item.id} style={withdrawRowStyle}>
+                        <div key={item.id} className="withdraw-row">
                           <div>
                             <button
- type="button"
- onClick={()=>setSelectedWithdraw(item)}
- style={{
-   ...withdrawIdStyle,
-   border:"none",
-   background:"transparent",
-   padding:0,
-   cursor:"pointer",
-   color:"#2563eb"
- }}
->
-เลขที่คำขอ: {item.id} 🔍
-</button>
-                            <div style={{ color: "#64748b", fontSize: 13 }}>
-                              วันที่: {formatThaiDate(item.createdAt)}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div style={rowLabelStyle}>จำนวนเงิน</div>
-                            <div style={rowValueStyle}>
-                              {formatMoney(item.amount)}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div style={rowLabelStyle}>สถานะ</div>
-                            <div
-                              style={{
-                                ...statusBadgeStyle,
-                                background:
-                                  item.status === "paid"
-                                    ? "#ecfdf5"
-                                    : item.status === "rejected"
-                                      ? "#fef2f2"
-                                      : "#fff7ed",
-                                color:
-                                  item.status === "paid"
-                                    ? "#166534"
-                                    : item.status === "rejected"
-                                      ? "#991b1b"
-                                      : "#9a3412",
-                                borderColor:
-                                  item.status === "paid"
-                                    ? "#86efac"
-                                    : item.status === "rejected"
-                                      ? "#fca5a5"
-                                      : "#fdba74",
-                              }}
+                              type="button"
+                              onClick={() => setSelectedWithdraw(item)}
+                              className="withdraw-id-btn"
                             >
-                              {getWithdrawStatusText(item.status)}
-                            </div>
+                              เลขที่คำขอ: {item.id} 🔍
+                            </button>
+                            <div className="muted-small">วันที่: {formatThaiDate(item.createdAt)}</div>
+                          </div>
+
+                          <div>
+                            <div className="row-label">จำนวนเงิน</div>
+                            <div className="row-value">{formatMoney(item.amount)}</div>
+                          </div>
+
+                          <div>
+                            <div className="row-label">สถานะ</div>
+                            <StatusBadge status={item.status} />
                           </div>
                         </div>
                       ))}
@@ -1375,49 +929,36 @@ export default function FinancePage() {
                   )}
                 </section>
 
-                <section id="reviews-section" style={sectionCardStyle}>
-                  <div style={reviewHeaderStyle}>
-                    <div style={sectionTitleStyle}>รีวิวของฉัน</div>
-
-                    <a href="/orders" style={createReviewButtonStyle}>
-  สร้างรีวิวใหม่
-</a>
+                <section id="reviews-section" className="section-card">
+                  <div className="review-header">
+                    <h2>รีวิวของฉัน</h2>
+                    <a href="/orders" className="create-review-btn">
+                      สร้างรีวิวใหม่
+                    </a>
                   </div>
 
                   {loadingReviews ? (
-                    <div style={emptyBoxStyle}>กำลังโหลดรีวิวของฉัน...</div>
+                    <div className="empty-box">กำลังโหลดรีวิวของฉัน...</div>
                   ) : myReviews.length === 0 ? (
-                    <div style={emptyBoxStyle}>
-                      ยังไม่มีรีวิวของครีเอเตอร์คนนี้
-                    </div>
+                    <div className="empty-box">ยังไม่มีรีวิวของครีเอเตอร์คนนี้</div>
                   ) : (
-                    <div style={{ display: "grid", gap: 16 }}>
+                    <div className="review-list">
                       {myReviews.map((review) => (
-                        <div key={review.id} style={reviewCardStyle}>
-                          <div style={reviewTopStyle}>
+                        <div key={review.id} className="review-card">
+                          <div className="review-top">
                             <div>
-                              <div style={reviewTitleStyle}>
-                                {review.title || "-"}
-                              </div>
-                              <div style={reviewMetaStyle}>
-                                สินค้า: {getProductName(review)}
-                              </div>
-                              <div style={reviewMetaSmallStyle}>
+                              <h3>{review.title || "-"}</h3>
+                              <p>สินค้า: {getProductName(review)}</p>
+                              <span>
                                 สถานะ: {review.status || "-"} • วันที่:{" "}
                                 {review.createdAt
-                                  ? new Date(
-                                      review.createdAt
-                                    ).toLocaleDateString("th-TH")
+                                  ? new Date(review.createdAt).toLocaleDateString("th-TH")
                                   : "-"}
-                              </div>
+                              </span>
                             </div>
 
-                            <div style={reviewActionWrapStyle}>
-                              <button
-                                type="button"
-                                onClick={() => goToEditReview(review)}
-                                style={editButtonStyle}
-                              >
+                            <div className="review-actions">
+                              <button type="button" onClick={() => goToEditReview(review)} className="edit-btn">
                                 แก้ไข
                               </button>
 
@@ -1425,36 +966,20 @@ export default function FinancePage() {
                                 type="button"
                                 onClick={() => handleDeleteReview(review.id)}
                                 disabled={deletingReviewId === review.id}
-                                style={{
-                                  ...deleteButtonStyle,
-                                  opacity:
-                                    deletingReviewId === review.id ? 0.7 : 1,
-                                  cursor:
-                                    deletingReviewId === review.id
-                                      ? "not-allowed"
-                                      : "pointer",
-                                }}
+                                className="delete-btn"
                               >
-                                {deletingReviewId === review.id
-                                  ? "กำลังลบ..."
-                                  : "ลบ"}
+                                {deletingReviewId === review.id ? "กำลังลบ..." : "ลบ"}
                               </button>
                             </div>
                           </div>
 
-                          <div style={slidesGridStyle}>
+                          <div className="slides-grid">
                             {(review.slides || []).map((slide, index) => (
-                              <div key={`${review.id}-${slide.key}-${index}`}>
-                                <div style={slidePreviewWrapStyle}>
-                                  <img
-                                    src={slide.img || "/no-image.png"}
-                                    alt={slide.text || `slide-${index + 1}`}
-                                    style={slidePreviewImageStyle}
-                                  />
+                              <div key={`${review.id}-${slide.key}-${index}`} className="slide-item">
+                                <div className="slide-img-wrap">
+                                  <img src={slide.img || "/no-image.png"} alt={slide.text || `slide-${index + 1}`} />
                                 </div>
-                                <div style={slidePreviewTextStyle}>
-                                  {slide.text || "-"}
-                                </div>
+                                <div className="slide-text">{slide.text || "-"}</div>
                               </div>
                             ))}
                           </div>
@@ -1468,745 +993,1098 @@ export default function FinancePage() {
           </main>
         </div>
       </div>
-{selectedWithdraw && (
-<div
-onClick={()=>setSelectedWithdraw(null)}
-style={{
-position:"fixed",
-inset:0,
-background:"rgba(0,0,0,.45)",
-zIndex:99999,
-display:"grid",
-placeItems:"center",
-padding:20
-}}
->
 
-<div
-onClick={(e)=>e.stopPropagation()}
-style={{
-background:"#fff",
-width:"min(900px,100%)",
-borderRadius:24,
-padding:24,
-maxHeight:"85vh",
-overflow:"auto"
-}}
->
+      {selectedWithdraw ? (
+        <WithdrawModal
+          selectedWithdraw={selectedWithdraw}
+          reviewTitleMap={reviewTitleMap}
+          onClose={() => setSelectedWithdraw(null)}
+        />
+      ) : null}
 
-<div style={{
-display:"flex",
-justifyContent:"space-between",
-marginBottom:18
-}}>
-<div>
-<div style={{
-fontSize:28,
-fontWeight:900
-}}>
-รายละเอียดคำขอถอน
-</div>
-
-<div style={{color:"#64748b"}}>
-เลขคำขอ {selectedWithdraw.id}
-</div>
-</div>
-
-<button
-onClick={()=>setSelectedWithdraw(null)}
-style={closeDetailButtonStyle}
->
-ปิด
-</button>
-</div>
-
-
-<div style={{
-display:"grid",
-gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
-gap:12,
-marginBottom:20
-}}>
-
-<div style={detailBoxStyle}>
-เลขคำขอ<br/>
-<b>{selectedWithdraw.id}</b>
-</div>
-
-<div style={detailBoxStyle}>
-จำนวนเงิน<br/>
-<b>{formatMoney(selectedWithdraw.amount)}</b>
-</div>
-
-<div style={detailBoxStyle}>
-สถานะ<br/>
-<b>{getWithdrawStatusText(selectedWithdraw.status)}</b>
-</div>
-
-<div style={detailBoxStyle}>
-วันที่ขอถอน<br/>
-<b>{formatThaiDate(selectedWithdraw.createdAt)}</b>
-</div>
-
-</div>
-
-<div style={{
-fontWeight:900,
-fontSize:20,
-marginBottom:12
-}}>
-คอมมิชชั่นที่ประกอบเป็นยอดถอนนี้
-</div>
-
-
-<div style={{display:"grid",gap:12}}>
-
-{(() => {
-  const breakdown = commissionsFromWithdraw(selectedWithdraw, creatorCommissions);
-
-  if (breakdown.length === 0) {
-    return (
-      <div
-        style={{
-          padding: 16,
-          borderRadius: 14,
-          background: "#fff7ed",
-          border: "1px solid #fed7aa",
-          color: "#9a3412",
-          fontWeight: 600,
-          lineHeight: 1.6,
-          fontSize: 14,
-        }}
-      >
-        <div style={{ fontWeight: 900, marginBottom: 6 }}>
-          ℹ️ ไม่มีรายละเอียดคอมมิชชั่นย้อนหลัง
-        </div>
-        คำขอถอนนี้ถูกสร้างก่อนระบบจะเริ่มเก็บ snapshot รายการคอมมิชชั่น
-        ระบบจึงไม่สามารถแสดงรายการที่ประกอบเป็นยอด{" "}
-        <b style={{ color: "#ee4d2d" }}>
-          {formatMoney(selectedWithdraw.amount)}
-        </b>{" "}
-        นี้ได้แม่นยำ — คำขอถอนใหม่จะแสดงรายละเอียดครบถ้วน
-      </div>
-    );
-  }
-
-  return breakdown.map((c) => (
-<div
-key={c.id}
-style={commissionRowStyle}
->
-
-<div>
-<div style={commissionTitleStyle}>
-รีวิว:
-{" "}
-{reviewTitleMap.get(
-String(c.reviewId||"")
-) || c.reviewId}
-</div>
-
-<div style={commissionMetaStyle}>
-Order:
-{c.orderId}
-</div>
-
-<div style={commissionMetaStyle}>
-Product:
-{c.productId}
-</div>
-</div>
-
-<div>
-<div style={rowLabelStyle}>ยอดขาย</div>
-<div style={rowValueStyle}>
-{formatMoney(
-getCommissionSaleAmount(c)
-)}
-</div>
-</div>
-
-<div>
-<div style={rowLabelStyle}>คอม</div>
-<div style={commissionAmountStyle}>
-{formatMoney(
-getCommissionAmount(c)
-)}
-</div>
-</div>
-
-<div
-style={{
-...statusBadgeStyle,
-background:"#eff6ff",
-color:"#1d4ed8",
-borderColor:"#93c5fd"
-}}
->
-{getCommissionStatusText(c.status)}
-</div>
-
-</div>
-));
-})()}
-
-</div>
-
-</div>
-</div>
-)}
       {popup ? (
-        <div style={popupStyle}>
-          <div style={popupTitleStyle}>💸 ได้รับเงิน +{popup.amount} บาท</div>
-          <div style={popupTextStyle}>จากรีวิว: {popup.review}</div>
-          <div style={popupOrderStyle}>ออเดอร์: {popup.orderId}</div>
+        <div className="popup">
+          <div className="popup-title">💸 ได้รับเงิน +{popup.amount} บาท</div>
+          <div className="popup-text">จากรีวิว: {popup.review}</div>
+          <div className="popup-order">ออเดอร์: {popup.orderId}</div>
         </div>
       ) : null}
+
+      <FinanceStyles />
     </>
   );
 }
 
-const loadingBoxStyle: React.CSSProperties = {
-  borderRadius: 24,
-  background: "#fff",
-  border: "1px solid #eef2f6",
-  boxShadow: "0 8px 24px rgba(15,23,42,0.06)",
-  padding: 28,
-  color: "#64748b",
-  fontWeight: 700,
-};
-
-const notCreatorBoxStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #eef2f6",
-  borderRadius: 24,
-  padding: 24,
-  boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-  color: "#9a3412",
-  fontWeight: 800,
-  lineHeight: 1.8,
-};
-
-const sidebarStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #eef2f6",
-  borderRadius: 24,
-  padding: 20,
-  boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-  position: "sticky",
-  top: 90,
-};
-
-const sidebarTitleStyle: React.CSSProperties = {
-  fontSize: 22,
-  fontWeight: 900,
-  color: "#0f172a",
-  marginBottom: 18,
-};
-
-const menuItemBaseStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  minHeight: 44,
-  padding: "10px 12px",
-  borderRadius: 14,
-  textDecoration: "none",
-  fontWeight: 800,
-  marginBottom: 8,
-};
-
-const activeMenuItemStyle: React.CSSProperties = {
-  ...menuItemBaseStyle,
-  background: "#fff1ee",
-  color: "#ee4d2d",
-  border: "1px solid #ffd2c6",
-};
-
-const menuItemStyle: React.CSSProperties = {
-  ...menuItemBaseStyle,
-  background: "#fff",
-  color: "#334155",
-  border: "1px solid transparent",
-};
-
-const helpBoxStyle: React.CSSProperties = {
-  marginTop: 18,
-  borderRadius: 16,
-  background: "#f8fbff",
-  border: "1px solid #dbeafe",
-  padding: 14,
-};
-
-const heroCardStyle: React.CSSProperties = {
-  background: "#fff7f2",
-  border: "1px solid #ffe2d5",
-  borderRadius: 24,
-  padding: 24,
-  boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-  marginBottom: 22,
-};
-
-const heroRowStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 16,
-  alignItems: "center",
-  flexWrap: "wrap",
-};
-
-const heroLeftStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 16,
-  alignItems: "center",
-};
-
-const heroIconWrapStyle: React.CSSProperties = {
-  width: 74,
-  height: 74,
-  borderRadius: 999,
-  display: "grid",
-  placeItems: "center",
-  background: "#ffd8bf",
-  fontSize: 34,
-  flexShrink: 0,
-};
-
-const heroTitleStyle: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 900,
-  color: "#0f172a",
-  marginBottom: 6,
-};
-
-const heroTextStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontWeight: 700,
-  lineHeight: 1.6,
-};
-
-const heroActionButtonStyle: React.CSSProperties = {
-  minHeight: 48,
-  padding: "0 18px",
-  borderRadius: 14,
-  background: "#fff",
-  color: "#334155",
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 900,
-  border: "1px solid #e2e8f0",
-};
-
-const walletGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: 16,
-  marginBottom: 22,
-};
-
-const cardBaseStyle: React.CSSProperties = {
-  borderRadius: 20,
-  padding: 18,
-  color: "#fff",
-  minHeight: 132,
-  boxShadow: "0 10px 22px rgba(15,23,42,0.08)",
-};
-
-const cardButtonBaseStyle: React.CSSProperties = {
-  ...cardBaseStyle,
-  border: "none",
-  textAlign: "left",
-  cursor: "pointer",
-};
-
-const orangeCardButtonStyle: React.CSSProperties = {
-  ...cardButtonBaseStyle,
-  background: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
-};
-
-const grayCardButtonStyle: React.CSSProperties = {
-  ...cardButtonBaseStyle,
-  background: "linear-gradient(135deg, #64748b 0%, #94a3b8 100%)",
-};
-
-const blueCardButtonStyle: React.CSSProperties = {
-  ...cardButtonBaseStyle,
-  background: "linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)",
-};
-
-const greenCardButtonStyle: React.CSSProperties = {
-  ...cardButtonBaseStyle,
-  background: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
-};
-
-const darkCardButtonStyle: React.CSSProperties = {
-  ...cardButtonBaseStyle,
-  background: "linear-gradient(135deg, #0f172a 0%, #334155 100%)",
-};
-
-const cardLabelStyle: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 900,
-  opacity: 0.95,
-  marginBottom: 14,
-};
-
-const cardValueStyle: React.CSSProperties = {
-  fontSize: 34,
-  fontWeight: 900,
-  lineHeight: 1.1,
-  marginBottom: 10,
-};
-
-const cardSubStyle: React.CSSProperties = {
-  fontSize: 14,
-  opacity: 0.95,
-  lineHeight: 1.5,
-  fontWeight: 700,
-};
-
-const clickHintStyle: React.CSSProperties = {
-  marginTop: 8,
-  fontSize: 12,
-  fontWeight: 900,
-  opacity: 0.85,
-};
-
-const detailCardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #eef2f6",
-  borderRadius: 24,
-  padding: 24,
-  boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-  marginBottom: 22,
-};
-
-const detailHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 14,
-};
-
-const detailDescriptionStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontWeight: 700,
-  lineHeight: 1.6,
-};
-
-const closeDetailButtonStyle: React.CSSProperties = {
-  height: 40,
-  padding: "0 14px",
-  borderRadius: 12,
-  border: "1px solid #e2e8f0",
-  background: "#fff",
-  color: "#334155",
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const detailAmountStyle: React.CSSProperties = {
-  marginTop: 18,
-  fontSize: 38,
-  fontWeight: 900,
-  color: "#0f172a",
-};
-
-const miniTitleStyle: React.CSSProperties = {
-  fontSize: 16,
-  fontWeight: 900,
-  color: "#0f172a",
-  marginBottom: 10,
-};
-
-const commissionRowStyle: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 18,
-  padding: 16,
-  background: "#fff",
-  display: "grid",
-  gridTemplateColumns: "1.4fr 0.7fr 0.7fr auto",
-  gap: 12,
-  alignItems: "center",
-};
-
-const commissionTitleStyle: React.CSSProperties = {
-  fontSize: 16,
-  fontWeight: 900,
-  color: "#0f172a",
-  marginBottom: 4,
-};
-
-const commissionMetaStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  lineHeight: 1.6,
-};
-
-const commissionAmountStyle: React.CSSProperties = {
-  fontSize: 20,
-  color: "#f97316",
-  fontWeight: 900,
-};
-
-const miniWithdrawRowStyle: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 14,
-  padding: 12,
-  display: "grid",
-  gridTemplateColumns: "1fr auto auto",
-  gap: 12,
-  alignItems: "center",
-};
-
-const miniWithdrawIdStyle: React.CSSProperties = {
-  fontWeight: 900,
-  color: "#0f172a",
-};
-
-const miniWithdrawDateStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  marginTop: 4,
-};
-
-const miniWithdrawAmountStyle: React.CSSProperties = {
-  fontWeight: 900,
-  color: "#0f172a",
-};
-
-const sectionCardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #eef2f6",
-  borderRadius: 24,
-  padding: 24,
-  boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-  marginBottom: 22,
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 24,
-  fontWeight: 900,
-  color: "#0f172a",
-  marginBottom: 16,
-};
-
-const paymentBoxStyle: React.CSSProperties = {
-  borderRadius: 18,
-  border: "1px solid #e2e8f0",
-  background: "#f8fafc",
-  padding: 18,
-  lineHeight: 1.9,
-  color: "#0f172a",
-};
-
-const paymentRowStyle: React.CSSProperties = {
-  marginBottom: 4,
-  fontSize: 16,
-};
-
-const emptyBoxStyle: React.CSSProperties = {
-  border: "1px dashed #d5d9e0",
-  borderRadius: 16,
-  padding: 20,
-  color: "#64748b",
-  background: "#fff",
-};
-
-const withdrawRowStyle: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 18,
-  padding: 16,
-  background: "#fff",
-  display: "grid",
-  gridTemplateColumns: "1.2fr 0.8fr 0.8fr",
-  gap: 12,
-  alignItems: "center",
-};
-
-const withdrawIdStyle: React.CSSProperties = {
-  fontWeight: 900,
-  color: "#0f172a",
-  marginBottom: 4,
-};
-
-const rowLabelStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: "#64748b",
-  marginBottom: 4,
-  fontWeight: 700,
-};
-
-const rowValueStyle: React.CSSProperties = {
-  fontSize: 18,
-  color: "#0f172a",
-  fontWeight: 900,
-};
-
-const statusBadgeStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: 34,
-  padding: "0 12px",
-  borderRadius: 999,
-  border: "1px solid transparent",
-  fontWeight: 900,
-  fontSize: 13,
-};
-
-const reviewHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 12,
-  flexWrap: "wrap",
-  marginBottom: 16,
-};
-
-const createReviewButtonStyle: React.CSSProperties = {
-  height: 44,
-  padding: "0 16px",
-  borderRadius: 14,
-  background: "#ee4d2d",
-  color: "#fff",
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 900,
-};
-
-const reviewCardStyle: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 20,
-  padding: 16,
-  background: "#fff",
-};
-
-const reviewTopStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 14,
-  flexWrap: "wrap",
-  alignItems: "flex-start",
-};
-
-const reviewTitleStyle: React.CSSProperties = {
-  fontWeight: 900,
-  fontSize: 18,
-  color: "#0f172a",
-};
-
-const reviewMetaStyle: React.CSSProperties = {
-  color: "#64748b",
-  marginTop: 6,
-  fontSize: 14,
-};
-
-const reviewMetaSmallStyle: React.CSSProperties = {
-  color: "#64748b",
-  marginTop: 4,
-  fontSize: 13,
-};
-
-const reviewActionWrapStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-};
-
-const editButtonStyle: React.CSSProperties = {
-  height: 42,
-  padding: "0 14px",
-  borderRadius: 12,
-  border: "none",
-  background: "#111827",
-  color: "#fff",
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const deleteButtonStyle: React.CSSProperties = {
-  height: 42,
-  padding: "0 14px",
-  borderRadius: 12,
-  border: "none",
-  background: "#dc2626",
-  color: "#fff",
-  fontWeight: 900,
-};
-
-const slidesGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-  gap: 12,
-  marginTop: 16,
-};
-
-const slidePreviewWrapStyle: React.CSSProperties = {
-  width: "100%",
-  aspectRatio: "4 / 5",
-  borderRadius: 12,
-  overflow: "hidden",
-  background: "#f8fafc",
-  border: "1px solid #e5e7eb",
-};
-
-const slidePreviewImageStyle: React.CSSProperties = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  display: "block",
-};
-
-const slidePreviewTextStyle: React.CSSProperties = {
-  fontSize: 12,
-  lineHeight: 1.45,
-  color: "#334155",
-  marginTop: 6,
-};
-
-const popupStyle: React.CSSProperties = {
-  position: "fixed",
-  right: 24,
-  bottom: 24,
-  zIndex: 9999,
-  minWidth: 320,
-  maxWidth: 420,
-  borderRadius: 18,
-  padding: "16px 18px",
-  background: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
-  color: "#fff",
-  boxShadow: "0 18px 38px rgba(0,0,0,0.22)",
-  border: "1px solid rgba(255,255,255,0.22)",
-};
-
-const popupTitleStyle: React.CSSProperties = {
-  fontSize: 22,
-  fontWeight: 900,
-  lineHeight: 1.1,
-  marginBottom: 6,
-};
-
-const popupTextStyle: React.CSSProperties = {
-  fontSize: 13,
-  opacity: 0.96,
-  lineHeight: 1.6,
-};
-
-const popupOrderStyle: React.CSSProperties = {
-  fontSize: 12,
-  opacity: 0.88,
-  marginTop: 6,
-};
-const detailBoxStyle: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
-  padding: 14,
-  background: "#f8fafc",
-  color: "#0f172a",
-  lineHeight: 1.7,
-};
+function WalletCard(props: {
+  className: string;
+  label: string;
+  value: string;
+  sub: string;
+  hint: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" onClick={props.onClick} className={`wallet-card ${props.className}`}>
+      <div className="wallet-label">{props.label}</div>
+      <div className="wallet-value">{props.value}</div>
+      <div className="wallet-sub">{props.sub}</div>
+      <div className="wallet-hint">{props.hint}</div>
+    </button>
+  );
+}
+
+function CommissionList(props: {
+  title: string;
+  emptyText: string;
+  commissions: CommissionRecord[];
+  reviewTitleMap: Map<string, string>;
+  badgeText: string;
+  badgeClass: string;
+}) {
+  return (
+    <div className="detail-block">
+      <h3>{props.title}</h3>
+
+      {props.commissions.length === 0 ? (
+        <div className="empty-box">{props.emptyText}</div>
+      ) : (
+        <div className="list-grid">
+          {props.commissions.map((commission) => {
+            const reviewId = String(commission.reviewId || "-");
+            const reviewTitle = props.reviewTitleMap.get(reviewId) || reviewId;
+
+            return (
+              <div key={String(commission.id || reviewId)} className="commission-row">
+                <div className="commission-main">
+                  <div className="commission-title">รีวิว: {reviewTitle}</div>
+                  <div className="commission-meta">Review ID: {reviewId}</div>
+                  <div className="commission-meta">Order ID: {commission.orderId || "-"}</div>
+                  <div className="commission-meta">วันที่: {formatThaiDate(commission.createdAt)}</div>
+                </div>
+
+                <div>
+                  <div className="row-label">ยอดขาย</div>
+                  <div className="row-value">{formatMoney(getCommissionSaleAmount(commission))}</div>
+                </div>
+
+                <div>
+                  <div className="row-label">คอมมิชชั่น</div>
+                  <div className="commission-amount">{formatMoney(getCommissionAmount(commission))}</div>
+                </div>
+
+                <div className={`status-badge ${props.badgeClass}`}>
+                  {props.badgeText || getCommissionStatusText(commission.status)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WithdrawMiniRow({ item }: { item: WithdrawRecord }) {
+  return (
+    <div className="mini-withdraw-row">
+      <div>
+        <div className="mini-withdraw-id">{item.id}</div>
+        <div className="muted-small">{formatThaiDate(item.createdAt)}</div>
+      </div>
+
+      <div className="mini-withdraw-amount">{formatMoney(item.amount)}</div>
+
+      <StatusBadge status={item.status} />
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  const cls =
+    status === "paid"
+      ? "badge-green"
+      : status === "rejected"
+        ? "badge-red"
+        : status === "approved"
+          ? "badge-blue"
+          : "badge-orange";
+
+  return <div className={`status-badge ${cls}`}>{getWithdrawStatusText(status)}</div>;
+}
+
+function WithdrawModal({
+  selectedWithdraw,
+  reviewTitleMap,
+  onClose,
+}: {
+  selectedWithdraw: WithdrawRecord;
+  reviewTitleMap: Map<string, string>;
+  onClose: () => void;
+}) {
+  const breakdown = commissionsFromWithdraw(selectedWithdraw);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <h2>รายละเอียดคำขอถอน</h2>
+            <p>เลขคำขอ {selectedWithdraw.id}</p>
+          </div>
+
+          <button type="button" onClick={onClose} className="light-btn">
+            ปิด
+          </button>
+        </div>
+
+        <div className="modal-detail-grid">
+          <div className="detail-box">
+            เลขคำขอ
+            <br />
+            <b>{selectedWithdraw.id}</b>
+          </div>
+
+          <div className="detail-box">
+            จำนวนเงิน
+            <br />
+            <b>{formatMoney(selectedWithdraw.amount)}</b>
+          </div>
+
+          <div className="detail-box">
+            สถานะ
+            <br />
+            <b>{getWithdrawStatusText(selectedWithdraw.status)}</b>
+          </div>
+
+          <div className="detail-box">
+            วันที่ขอถอน
+            <br />
+            <b>{formatThaiDate(selectedWithdraw.createdAt)}</b>
+          </div>
+        </div>
+
+        <h3 className="modal-section-title">คอมมิชชั่นที่ประกอบเป็นยอดถอนนี้</h3>
+
+        {breakdown.length === 0 ? (
+          <div className="empty-box warning">
+            <b>ℹ️ ไม่มีรายละเอียดคอมมิชชั่นย้อนหลัง</b>
+            <br />
+            คำขอถอนนี้ถูกสร้างก่อนระบบจะเริ่มเก็บ snapshot รายการคอมมิชชั่น
+            ระบบจึงไม่สามารถแสดงรายการที่ประกอบเป็นยอด{" "}
+            <b>{formatMoney(selectedWithdraw.amount)}</b> นี้ได้แม่นยำ
+          </div>
+        ) : (
+          <div className="list-grid">
+            {breakdown.map((c) => {
+              const reviewId = String(c.reviewId || "");
+              return (
+                <div key={c.id} className="commission-row">
+                  <div className="commission-main">
+                    <div className="commission-title">
+                      รีวิว: {reviewTitleMap.get(reviewId) || c.reviewId}
+                    </div>
+                    <div className="commission-meta">Order: {c.orderId}</div>
+                    <div className="commission-meta">Product: {c.productId}</div>
+                  </div>
+
+                  <div>
+                    <div className="row-label">ยอดขาย</div>
+                    <div className="row-value">{formatMoney(getCommissionSaleAmount(c))}</div>
+                  </div>
+
+                  <div>
+                    <div className="row-label">คอม</div>
+                    <div className="commission-amount">{formatMoney(getCommissionAmount(c))}</div>
+                  </div>
+
+                  <div className="status-badge badge-blue">{getCommissionStatusText(c.status)}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FinanceStyles() {
+  return (
+    <style jsx global>{`
+      .finance-page {
+        max-width: 1320px;
+        margin: 24px auto;
+        padding: 0 16px 40px;
+      }
+
+      .finance-shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+
+      .finance-main {
+        min-width: 0;
+      }
+
+      .creator-sidebar,
+      .section-card,
+      .hero-card,
+      .loading-box,
+      .not-creator-box {
+        background: #fff;
+        border: 1px solid #eef2f6;
+        border-radius: 24px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+      }
+
+      .creator-sidebar {
+        padding: 20px;
+        position: sticky;
+        top: 90px;
+      }
+
+      .sidebar-title {
+        font-size: 22px;
+        font-weight: 900;
+        color: #0f172a;
+        margin-bottom: 18px;
+      }
+
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        text-decoration: none;
+        font-weight: 800;
+        margin-bottom: 8px;
+        color: #334155;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+
+      .menu-item.active {
+        background: #fff1ee;
+        color: #ee4d2d;
+        border-color: #ffd2c6;
+      }
+
+      .help-box {
+        margin-top: 18px;
+        border-radius: 16px;
+        background: #f8fbff;
+        border: 1px solid #dbeafe;
+        padding: 14px;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.5;
+        display: grid;
+        gap: 6px;
+      }
+
+      .hero-card {
+        background: #fff7f2;
+        border-color: #ffe2d5;
+        padding: 24px;
+        margin-bottom: 22px;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+      }
+
+      .hero-left {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .hero-icon {
+        width: 74px;
+        height: 74px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: #ffd8bf;
+        font-size: 34px;
+        flex-shrink: 0;
+      }
+
+      .hero-card h1 {
+        font-size: 20px;
+        font-weight: 900;
+        color: #0f172a;
+        margin: 0 0 6px;
+      }
+
+      .hero-card p {
+        color: #64748b;
+        font-weight: 700;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .hero-btn,
+      .light-btn {
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 14px;
+        background: #fff;
+        color: #334155;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .wallet-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 22px;
+      }
+
+      .wallet-card {
+        border: none;
+        border-radius: 20px;
+        padding: 18px;
+        color: #fff;
+        min-height: 132px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+        text-align: left;
+        cursor: pointer;
+        min-width: 0;
+      }
+
+      .wallet-gray {
+        background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
+      }
+
+      .wallet-orange {
+        background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+      }
+
+      .wallet-blue {
+        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+      }
+
+      .wallet-green {
+        background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+      }
+
+      .wallet-dark {
+        background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+      }
+
+      .wallet-label {
+        font-size: 14px;
+        font-weight: 900;
+        opacity: 0.95;
+        margin-bottom: 14px;
+      }
+
+      .wallet-value {
+        font-size: clamp(24px, 3vw, 34px);
+        font-weight: 900;
+        line-height: 1.1;
+        margin-bottom: 10px;
+        word-break: break-word;
+      }
+
+      .wallet-sub {
+        font-size: 14px;
+        opacity: 0.95;
+        line-height: 1.5;
+        font-weight: 700;
+      }
+
+      .wallet-hint {
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 900;
+        opacity: 0.85;
+      }
+
+      .section-card {
+        padding: 24px;
+        margin-bottom: 22px;
+        min-width: 0;
+      }
+
+      .section-card h2,
+      .detail-card h2 {
+        font-size: 24px;
+        font-weight: 900;
+        color: #0f172a;
+        margin: 0 0 16px;
+      }
+
+      .detail-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+      }
+
+      .detail-head p {
+        color: #64748b;
+        font-weight: 700;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .detail-amount {
+        margin-top: 18px;
+        font-size: clamp(28px, 5vw, 38px);
+        font-weight: 900;
+        color: #0f172a;
+        word-break: break-word;
+      }
+
+      .detail-block {
+        margin-top: 18px;
+      }
+
+      .detail-block h3 {
+        font-size: 16px;
+        font-weight: 900;
+        color: #0f172a;
+        margin: 0 0 10px;
+      }
+
+      .list-grid,
+      .review-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .commission-row {
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 16px;
+        background: #fff;
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(100px, 0.7fr) minmax(100px, 0.7fr) auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .commission-main {
+        min-width: 0;
+      }
+
+      .commission-title {
+        font-size: 16px;
+        font-weight: 900;
+        color: #0f172a;
+        margin-bottom: 4px;
+        overflow-wrap: anywhere;
+      }
+
+      .commission-meta,
+      .muted-small {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+
+      .row-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+        font-weight: 700;
+      }
+
+      .row-value,
+      .mini-withdraw-amount {
+        font-size: 18px;
+        color: #0f172a;
+        font-weight: 900;
+      }
+
+      .commission-amount {
+        font-size: 20px;
+        color: #f97316;
+        font-weight: 900;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-weight: 900;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .badge-green {
+        background: #ecfdf5;
+        color: #166534;
+        border-color: #86efac;
+      }
+
+      .badge-blue {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-color: #93c5fd;
+      }
+
+      .badge-orange {
+        background: #fff7ed;
+        color: #9a3412;
+        border-color: #fdba74;
+      }
+
+      .badge-red {
+        background: #fef2f2;
+        color: #991b1b;
+        border-color: #fca5a5;
+      }
+
+      .badge-gray {
+        background: #f1f5f9;
+        color: #475569;
+        border-color: #cbd5e1;
+      }
+
+      .payment-box,
+      .detail-box {
+        border-radius: 18px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        padding: 18px;
+        line-height: 1.9;
+        color: #0f172a;
+        overflow-wrap: anywhere;
+      }
+
+      .withdraw-btn {
+        margin-top: 18px;
+        height: 56px;
+        width: 100%;
+        border-radius: 16px;
+        border: none;
+        background: linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%);
+        color: #fff;
+        font-weight: 900;
+        font-size: 18px;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(238, 77, 45, 0.18);
+      }
+
+      .withdraw-btn:disabled {
+        background: #cbd5e1;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .withdraw-row,
+      .mini-withdraw-row {
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 16px;
+        background: #fff;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr);
+        gap: 12px;
+        align-items: center;
+      }
+
+      .mini-withdraw-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        padding: 12px;
+        border-radius: 14px;
+      }
+
+      .withdraw-id-btn {
+        border: none;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        color: #2563eb;
+        font-weight: 900;
+        margin-bottom: 4px;
+        text-align: left;
+        overflow-wrap: anywhere;
+      }
+
+      .empty-box {
+        border: 1px dashed #d5d9e0;
+        border-radius: 16px;
+        padding: 20px;
+        color: #64748b;
+        background: #fff;
+        line-height: 1.7;
+      }
+
+      .empty-box.warning {
+        background: #fff7ed;
+        border-color: #fed7aa;
+        color: #9a3412;
+      }
+
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+
+      .review-header h2 {
+        margin-bottom: 0;
+      }
+
+      .create-review-btn {
+        height: 44px;
+        padding: 0 16px;
+        border-radius: 14px;
+        background: #ee4d2d;
+        color: #fff;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+      }
+
+      .review-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        padding: 16px;
+        background: #fff;
+      }
+
+      .review-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .review-top h3 {
+        font-weight: 900;
+        font-size: 18px;
+        color: #0f172a;
+        margin: 0;
+      }
+
+      .review-top p {
+        color: #64748b;
+        margin: 6px 0 0;
+        font-size: 14px;
+      }
+
+      .review-top span {
+        color: #64748b;
+        margin-top: 4px;
+        font-size: 13px;
+        display: block;
+      }
+
+      .review-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .edit-btn,
+      .delete-btn {
+        height: 42px;
+        padding: 0 14px;
+        border-radius: 12px;
+        border: none;
+        color: #fff;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .edit-btn {
+        background: #111827;
+      }
+
+      .delete-btn {
+        background: #dc2626;
+      }
+
+      .slides-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .slide-img-wrap {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+      }
+
+      .slide-img-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .slide-text {
+        font-size: 12px;
+        line-height: 1.45;
+        color: #334155;
+        margin-top: 6px;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 99999;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+      }
+
+      .modal-card {
+        background: #fff;
+        width: min(900px, 100%);
+        border-radius: 24px;
+        padding: 24px;
+        max-height: 85vh;
+        overflow: auto;
+      }
+
+      .modal-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .modal-head h2 {
+        font-size: 28px;
+        font-weight: 900;
+        margin: 0 0 4px;
+      }
+
+      .modal-head p {
+        color: #64748b;
+        margin: 0;
+      }
+
+      .modal-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .modal-section-title {
+        font-weight: 900;
+        font-size: 20px;
+        margin: 0 0 12px;
+      }
+
+      .popup {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 9999;
+        min-width: 320px;
+        max-width: 420px;
+        border-radius: 18px;
+        padding: 16px 18px;
+        background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+        color: #fff;
+        box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+      }
+
+      .popup-title {
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-bottom: 6px;
+      }
+
+      .popup-text {
+        font-size: 13px;
+        opacity: 0.96;
+        line-height: 1.6;
+      }
+
+      .popup-order {
+        font-size: 12px;
+        opacity: 0.88;
+        margin-top: 6px;
+      }
+
+      .loading-box,
+      .not-creator-box {
+        padding: 28px;
+        color: #64748b;
+        font-weight: 700;
+      }
+
+      .not-creator-box {
+        color: #9a3412;
+        line-height: 1.8;
+      }
+
+      @media (max-width: 1180px) {
+        .wallet-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .wallet-dark {
+          grid-column: span 2;
+        }
+
+        .commission-row {
+          grid-template-columns: minmax(0, 1fr) minmax(100px, auto) minmax(100px, auto);
+        }
+
+        .commission-row .status-badge {
+          grid-column: 1 / -1;
+          justify-self: start;
+        }
+
+        .slides-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 820px) {
+        .finance-page {
+          margin: 12px auto;
+          padding: 0 10px 28px;
+        }
+
+        .finance-shell {
+          display: block;
+        }
+
+        .creator-sidebar {
+          position: relative;
+          top: auto;
+          padding: 12px;
+          border-radius: 18px;
+          margin-bottom: 14px;
+          overflow-x: auto;
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          scrollbar-width: thin;
+        }
+
+        .sidebar-title,
+        .help-box {
+          display: none;
+        }
+
+        .menu-item {
+          margin: 0;
+          flex: 0 0 auto;
+          min-height: 40px;
+          padding: 8px 12px;
+          border-radius: 999px;
+          font-size: 13px;
+        }
+
+        .hero-card {
+          border-radius: 18px;
+          padding: 16px;
+          display: grid;
+          gap: 14px;
+        }
+
+        .hero-left {
+          align-items: flex-start;
+        }
+
+        .hero-icon {
+          width: 52px;
+          height: 52px;
+          font-size: 24px;
+        }
+
+        .hero-card h1 {
+          font-size: 18px;
+        }
+
+        .hero-card p {
+          font-size: 13px;
+        }
+
+        .hero-btn {
+          width: 100%;
+        }
+
+        .wallet-grid {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .wallet-dark {
+          grid-column: auto;
+        }
+
+        .wallet-card {
+          min-height: auto;
+          padding: 16px;
+          border-radius: 18px;
+        }
+
+        .wallet-label {
+          margin-bottom: 8px;
+        }
+
+        .wallet-value {
+          font-size: 30px;
+        }
+
+        .section-card {
+          padding: 16px;
+          border-radius: 18px;
+          margin-bottom: 14px;
+        }
+
+        .section-card h2,
+        .detail-card h2 {
+          font-size: 20px;
+        }
+
+        .detail-head {
+          display: grid;
+          gap: 12px;
+        }
+
+        .light-btn {
+          width: 100%;
+        }
+
+        .commission-row,
+        .withdraw-row,
+        .mini-withdraw-row {
+          grid-template-columns: 1fr;
+          gap: 10px;
+          border-radius: 16px;
+        }
+
+        .commission-row .status-badge {
+          grid-column: auto;
+        }
+
+        .status-badge {
+          width: fit-content;
+          max-width: 100%;
+          white-space: normal;
+          text-align: center;
+        }
+
+        .payment-box {
+          font-size: 14px;
+          padding: 14px;
+        }
+
+        .withdraw-btn {
+          height: 52px;
+          font-size: 16px;
+        }
+
+        .review-header {
+          display: grid;
+          gap: 10px;
+        }
+
+        .create-review-btn {
+          width: 100%;
+        }
+
+        .review-top {
+          display: grid;
+        }
+
+        .review-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          width: 100%;
+        }
+
+        .edit-btn,
+        .delete-btn {
+          width: 100%;
+        }
+
+        .slides-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .modal-backdrop {
+          padding: 10px;
+          align-items: end;
+        }
+
+        .modal-card {
+          width: 100%;
+          max-height: 90vh;
+          border-radius: 22px 22px 0 0;
+          padding: 16px;
+        }
+
+        .modal-head {
+          display: grid;
+        }
+
+        .modal-head h2 {
+          font-size: 22px;
+        }
+
+        .modal-detail-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .popup {
+          right: 10px;
+          left: 10px;
+          bottom: 10px;
+          min-width: 0;
+          max-width: none;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .finance-page {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+
+        .wallet-value {
+          font-size: 26px;
+        }
+
+        .slides-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `}</style>
+  );
+}
