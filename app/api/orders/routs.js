@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 const ordersFile = path.join(process.cwd(), "data", "orders.json");
 
 // อ่านไฟล์ orders
