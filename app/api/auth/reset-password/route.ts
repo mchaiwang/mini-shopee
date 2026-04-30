@@ -10,27 +10,36 @@ const filePath = path.join(process.cwd(), "data/users.json");
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const email = String(body.email || "").trim().toLowerCase();
-    const otp = String(body.otp || "").trim();
-    const newPassword = String(body.newPassword || "");
+    const { email, otp, newPassword } = await req.json();
 
-    if (!email || !otp || !newPassword) {
-      return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบ" }, { status: 400 });
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanOtp = String(otp || "").trim();
+    const password = String(newPassword || "");
+
+    if (!cleanEmail || !cleanOtp || !password) {
+      return NextResponse.json(
+        { error: "กรุณากรอกข้อมูลให้ครบ" },
+        { status: 400 }
+      );
     }
 
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    const user = users.find((u: any) => String(u.email || "").toLowerCase() === email);
+    const user = users.find(
+      (u: any) => String(u.email || "").trim().toLowerCase() === cleanEmail
+    );
 
     if (!user) {
       return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 400 });
     }
 
     if (user.otpPurpose !== "reset") {
-      return NextResponse.json({ error: "OTP นี้ไม่ใช่สำหรับรีเซตรหัสผ่าน" }, { status: 400 });
+      return NextResponse.json(
+        { error: "OTP นี้ไม่ใช่สำหรับรีเซตรหัสผ่าน" },
+        { status: 400 }
+      );
     }
 
-    if (!user.otpCode || String(user.otpCode) !== otp) {
+    if (String(user.otpCode || "") !== cleanOtp) {
       return NextResponse.json({ error: "OTP ไม่ถูกต้อง" }, { status: 400 });
     }
 
@@ -38,7 +47,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "OTP หมดอายุ" }, { status: 400 });
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await bcrypt.hash(password, 10);
     user.otpCode = "";
     user.otpPurpose = "";
     user.otpExpiresAt = "";
@@ -49,6 +58,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("RESET PASSWORD ERROR:", error);
-    return NextResponse.json({ error: "server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "รีเซตรหัสผ่านไม่สำเร็จ" },
+      { status: 500 }
+    );
   }
 }

@@ -137,8 +137,8 @@
     "role": "customer",
     "createdAt": "2026-04-30T12:03:52.063Z",
     "emailVerified": true,
-    "otpCode": "",
-    "otpPurpose": "",
-    "otpExpiresAt": ""
+    "otpCode": "442709",
+    "otpPurpose": "reset",
+    "otpExpiresAt": 1777553033541
   }
 ]

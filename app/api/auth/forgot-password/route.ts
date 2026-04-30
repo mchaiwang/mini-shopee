@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { sendEmailOtp } from "@/lib/sendEmailOtp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,14 +14,19 @@ function generateOTP() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const email = String(body.email || "").trim().toLowerCase();
+    const { email } = await req.json();
+    const cleanEmail = String(email || "").trim().toLowerCase();
 
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    const user = users.find((u: any) => String(u.email || "").toLowerCase() === email);
+    const user = users.find(
+      (u: any) => String(u.email || "").trim().toLowerCase() === cleanEmail
+    );
 
     if (!user) {
-      return NextResponse.json({ error: "ไม่พบอีเมลนี้ในระบบ" }, { status: 400 });
+      return NextResponse.json(
+        { error: "ไม่พบอีเมลนี้ในระบบ" },
+        { status: 400 }
+      );
     }
 
     const otp = generateOTP();
@@ -31,14 +37,17 @@ export async function POST(req: Request) {
 
     fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
 
-    console.log("RESET OTP:", otp);
+    await sendEmailOtp(cleanEmail, otp, "reset");
 
     return NextResponse.json({
       success: true,
-      devOtp: otp,
+      message: "ส่ง OTP ไปยังอีเมลแล้ว",
     });
   } catch (error) {
     console.error("FORGOT PASSWORD ERROR:", error);
-    return NextResponse.json({ error: "server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "ส่ง OTP ไม่สำเร็จ" },
+      { status: 500 }
+    );
   }
 }
