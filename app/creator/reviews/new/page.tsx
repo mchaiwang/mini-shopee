@@ -294,24 +294,68 @@ const orderId = searchParams.get("orderId") || "";
   }
 
   async function handleSelectImage(
-    index: number,
-    e: ChangeEvent<HTMLInputElement>
-  ) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  index: number,
+  e: ChangeEvent<HTMLInputElement>
+) {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    try {
-      setSlideUploading(index, true);
-      const url = await uploadImageFile(file);
-      updateSlide(index, "image", url);
-    } catch (error: any) {
-      console.error(error);
-      alert(error?.message || "อัปโหลดรูปไม่สำเร็จ");
-    } finally {
-      setSlideUploading(index, false);
-      e.target.value = "";
-    }
+  // ✅ จำกัดขนาดไฟล์ (2MB)
+  const MAX_SIZE = 2 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    alert("ไฟล์ใหญ่เกิน 2MB กรุณาเลือกรูปใหม่");
+    return;
   }
+
+  try {
+    setSlideUploading(index, true);
+
+    // ✅ โหลดรูปเข้า Image object
+    const img = new Image();
+    const reader = new FileReader();
+
+    const base64 = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => {
+        img.src = String(reader.result);
+      };
+      reader.onerror = () => reject("อ่านไฟล์ไม่สำเร็จ");
+      reader.readAsDataURL(file);
+
+      img.onload = () => {
+        // ✅ resize
+        const canvas = document.createElement("canvas");
+
+        const MAX_WIDTH = 800; // ปรับได้
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject("canvas error");
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // ✅ บีบไฟล์ (0.7 = คุณภาพ)
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+
+        resolve(compressed);
+      };
+
+      img.onerror = () => reject("โหลดรูปไม่สำเร็จ");
+    });
+
+    // ✅ ใส่เข้า state
+    updateSlide(index, "image", base64);
+
+  } catch (error: any) {
+    console.error(error);
+    alert(error?.message || "อัปโหลดรูปไม่สำเร็จ");
+  } finally {
+    setSlideUploading(index, false);
+    e.target.value = "";
+  }
+}
 
   function fillFormFromReview(review: CreatorReview) {
     setEditingReviewId(review.id || "");
