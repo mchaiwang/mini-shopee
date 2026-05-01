@@ -1,10 +1,10 @@
+// app/api/auth/register/route.ts
+
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import { sendOTPEmail } from "@/lib/mailer";
 
 const filePath = path.join(process.cwd(), "data/users.json");
 
@@ -24,7 +24,10 @@ export async function POST(req: Request) {
     }
 
     const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    const exists = users.find((u: any) => String(u.email || "").toLowerCase() === email);
+
+    const exists = users.find(
+      (u: any) => String(u.email).toLowerCase() === email
+    );
 
     if (exists) {
       return NextResponse.json({ error: "Email already used" }, { status: 400 });
@@ -49,12 +52,12 @@ export async function POST(req: Request) {
     users.push(newUser);
     fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
 
-    console.log("REGISTER OTP:", otp);
+    // 🔥 ส่ง email จริง
+    await sendOTPEmail(email, otp);
 
     return NextResponse.json({
       success: true,
       needVerify: true,
-      devOtp: otp,
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);

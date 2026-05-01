@@ -1,18 +1,20 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-export const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendOTPEmail(email: string, otp: string) {
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+  console.log("📨 sending OTP to:", email);
+
+  const res = await resend.emails.send({
+    from: process.env.EMAIL_FROM!,
     to: email,
-    subject: "OTP Reset Password",
-    html: `<h1>${otp}</h1><p>หมดอายุ 5 นาที</p>`,
+    subject: "รหัส OTP ของคุณ",
+    html: `
+      <h2>รหัส OTP</h2>
+      <h1 style="color:red">${otp}</h1>
+      <p>หมดอายุ 5 นาที</p>
+    `,
   });
+
+  console.log("RESEND RESULT:", res);
 }
