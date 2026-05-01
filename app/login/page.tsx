@@ -202,21 +202,38 @@ function LoginPageInner() {
                 marginBottom: 22,
               }}
             >
-              🌿
+              🐾
             </div>
 
-            <h1 style={{ fontSize: 42, lineHeight: 1.12, fontWeight: 900, margin: 0 }}>
-              Herbal Store
+            <h1 style={{ fontSize: 36, lineHeight: 1.2, fontWeight: 900, margin: 0 }}>
+              💸 ทางเลือกที่ช่วย “ลดภาระ”
             </h1>
 
-            <div style={{ marginTop: 14, fontSize: 18, lineHeight: 1.75, opacity: 0.96 }}>
-              เข้าสู่ระบบเพื่อสั่งซื้อสินค้า จัดการที่อยู่จัดส่ง และติดตามคำสั่งซื้อได้สะดวกยิ่งขึ้น
+            <div style={{ marginTop: 16, fontSize: 17, lineHeight: 1.85, opacity: 0.96 }}>
+              <div style={{ fontWeight: 800, marginBottom: 10 }}>
+                หนึ่งในสิ่งที่ทำให้หลายคนลังเล คือ “ค่าใช้จ่าย”
+              </div>
+
+              <div>
+                fipแมว.com จึงตั้งใจเป็นอีกทางเลือกหนึ่ง
+                <br />
+                ที่ช่วยให้เจ้าของแมวสามารถเข้าถึงแนวทางการดูแลได้ง่ายขึ้น
+              </div>
             </div>
 
             <div style={{ marginTop: 26, display: "grid", gap: 12 }}>
-              <div style={featureRow}><span style={featureDot}>✓</span><span>บันทึกข้อมูลผู้รับและที่อยู่จัดส่งอัตโนมัติ</span></div>
-              <div style={featureRow}><span style={featureDot}>✓</span><span>ตรวจสอบสถานะคำสั่งซื้อได้ทันที</span></div>
-              <div style={featureRow}><span style={featureDot}>✓</span><span>ชำระเงินและอัปโหลดสลิปได้สะดวก</span></div>
+              <div style={featureRow}>
+                <span style={featureDot}>✓</span>
+                <span>มีข้อมูลเปรียบเทียบ</span>
+              </div>
+              <div style={featureRow}>
+                <span style={featureDot}>✓</span>
+                <span>มีแนวทางจากผู้ใช้จริง</span>
+              </div>
+              <div style={featureRow}>
+                <span style={featureDot}>✓</span>
+                <span>ช่วยตัดสินใจได้อย่างมีข้อมูล</span>
+              </div>
             </div>
           </div>
         )}
@@ -297,7 +314,12 @@ function LoginPageInner() {
             <input
               placeholder="OTP 6 หลัก"
               value={form.otp}
-              onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  otp: e.target.value.replace(/\D/g, "").slice(0, 6),
+                })
+              }
               style={inputStyle}
             />
           )}
