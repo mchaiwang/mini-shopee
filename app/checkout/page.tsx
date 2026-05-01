@@ -393,7 +393,7 @@ export default function CheckoutPage() {
             lineHeight: 1.15,
           }}
         >
-          ยืนยันคำสั่งซื้อ
+          โปรดตรวจสอบ
         </h1>
         <div
           style={{
@@ -403,7 +403,7 @@ export default function CheckoutPage() {
             lineHeight: 1.4,
           }}
         >
-          ตรวจสอบที่อยู่จัดส่ง วิธีชำระเงิน และสรุปรายการก่อนกดยืนยัน
+          ที่อยู่จัดส่ง รายการสินค้า วิธีชำระเงิน ก่อนกดยืนยันคำสั่งซื้อ
         </div>
       </div>
 

@@ -407,6 +407,7 @@ function ShopClientInner() {
   const searchParams = useSearchParams();
   const didHydrateCartRef = useRef(false);
   const cartPersistReadyRef = useRef(false);
+  const cartAddedTimerRef = useRef<number | null>(null);
   const isMobile = useIsMobile(640);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -585,6 +586,13 @@ searchText: [
     loadProducts();
     loadReviews();
     loadCartFromStorage();
+
+    return () => {
+      if (cartAddedTimerRef.current) {
+        window.clearTimeout(cartAddedTimerRef.current);
+        cartAddedTimerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -630,13 +638,14 @@ searchText: [
     if (!fromCartAdd) return;
 
     loadCartFromStorage();
-    setShowCartAddedBanner(true);
+    showAddedToCartMessage();
 
-    const timer = window.setTimeout(() => {
-      setShowCartAddedBanner(false);
-    }, 2500);
-
-    return () => window.clearTimeout(timer);
+    return () => {
+      if (cartAddedTimerRef.current) {
+        window.clearTimeout(cartAddedTimerRef.current);
+        cartAddedTimerRef.current = null;
+      }
+    };
   }, [fromCartAdd]);
 
   const addToCart = (
@@ -673,7 +682,20 @@ searchText: [
           ];
     });
   };
+  const showAddedToCartMessage = (creatorName?: string) => {
+    if (cartAddedTimerRef.current) {
+      window.clearTimeout(cartAddedTimerRef.current);
+    }
 
+    setCartAddedCreatorName(creatorName || "");
+    setShowCartAddedBanner(true);
+
+    cartAddedTimerRef.current = window.setTimeout(() => {
+      setShowCartAddedBanner(false);
+      setCartAddedCreatorName("");
+      cartAddedTimerRef.current = null;
+    }, 2600);
+  };
   const addProductFromReviewToCart = (review: ReviewFeedItem) => {
     const product = products.find(
       (item) => Number(item.id) === Number(review.productId)
@@ -689,13 +711,7 @@ searchText: [
       refReview,
       creatorName: review.creatorName || "ครีเอเตอร์",
     });
-    setCartAddedCreatorName(review.creatorName || "ครีเอเตอร์");
-    setShowCartAddedBanner(true);
-
-    window.setTimeout(() => {
-      setShowCartAddedBanner(false);
-      setCartAddedCreatorName("");
-    }, 2600);
+    showAddedToCartMessage(review.creatorName || "ครีเอเตอร์");
   };
 
   const removeFromCart = (productId: number) => {
@@ -944,7 +960,23 @@ searchText: [
           <button
             onClick={(e) => {
               e.stopPropagation();
-              addToCart(product);
+             addToCart(product);
+
+                const showAddedToCartMessage = (creatorName?: string) => {
+    if (cartAddedTimerRef.current) {
+      window.clearTimeout(cartAddedTimerRef.current);
+    }
+
+    setCartAddedCreatorName(creatorName || "");
+    setShowCartAddedBanner(true);
+
+    cartAddedTimerRef.current = window.setTimeout(() => {
+      setShowCartAddedBanner(false);
+      setCartAddedCreatorName("");
+      cartAddedTimerRef.current = null;
+    }, 2600);
+  };
+showAddedToCartMessage();
             }}
             disabled={product.stock <= 0}
             style={{
@@ -1185,19 +1217,30 @@ searchText: [
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           {showCartAddedBanner ? (
             <div
+              role="status"
+              aria-live="polite"
               style={{
+                position: "fixed",
+                top: isMobile ? 14 : 22,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 9999,
+                width: isMobile ? "calc(100% - 24px)" : "fit-content",
+                maxWidth: 560,
                 background: "#f6ffed",
                 border: "1px solid #b7eb8f",
-                color: "#389e0d",
-                borderRadius: 12,
-                padding: "12px 16px",
-                marginBottom: 16,
-                fontWeight: 800,
-                fontSize: 14,
+                color: "#237804",
+                borderRadius: 999,
+                padding: isMobile ? "11px 14px" : "12px 18px",
+                fontWeight: 900,
+                fontSize: isMobile ? 13 : 14,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
+                textAlign: "center",
+                pointerEvents: "none",
               }}
             >
-              {cartAddedCreatorName
-                ? `เพิ่มสินค้าลงตะกร้าแล้ว • ครีเอเตอร์รับคอมมิชชั่น: ${cartAddedCreatorName}`
+              ✅ {cartAddedCreatorName
+                ? `เพิ่มสินค้าลงตะกร้าแล้ว • ครีเอเตอร์: ${cartAddedCreatorName}`
                 : "เพิ่มสินค้าลงตะกร้าแล้ว"}
             </div>
           ) : null}
