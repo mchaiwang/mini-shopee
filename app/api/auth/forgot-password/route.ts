@@ -1,8 +1,14 @@
-import { NextResponse } from "next/server";
-import { Resend } from "resend";
-import { setOTP } from "@/lib/otpStore";
+// app/api/auth/forgot-password/route.ts
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+
+const filePath = path.join(process.cwd(), "data/users.json");
+
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export async function POST(req: Request) {
   try {
@@ -12,26 +18,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
-    // เก็บ OTP ใน memory
-    setOTP(email, otp);
+    const user = users.find(
+      (u: any) => String(u.email).toLowerCase() === String(email).toLowerCase()
+    );
 
-    // ส่ง email
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM!,
-      to: email,
-      subject: "OTP Reset Password",
-      html: `
-        <h2>รหัส OTP ของคุณ</h2>
-        <h1>${otp}</h1>
-        <p>หมดอายุใน 5 นาที</p>
-      `,
+    if (!user) {
+      return NextResponse.json({ error: "ไม่พบผู้ใช้นี้" }, { status: 400 });
+    }
+
+    const otp = generateOTP();
+
+    user.otpCode = otp;
+    user.otpPurpose = "reset";
+    user.otpExpiresAt = Date.now() + 5 * 60 * 1000;
+
+    fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
+
+    console.log("RESET OTP:", otp);
+
+    return NextResponse.json({
+      success: true,
+      devOtp: otp,
     });
-
-    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("FORGOT PASSWORD ERROR:", err);
     return NextResponse.json({ error: "send otp failed" }, { status: 500 });
   }
 }
