@@ -133,12 +133,12 @@
     "id": "user-1777550632063",
     "name": "จอบละโว้",
     "email": "root2552@gmail.com",
-    "passwordHash": "$2b$10$2GJVbnDpBxcpMvd/XJ0bheX6qYOB8MMVO48EEwVeIY9oPtvAlGLde",
+    "passwordHash": "$2b$10$dgCm2BVnhk.t5gtm0WwgDuAWOH9J7io6Nk8KCOjQRWTOF93s950wW",
     "role": "customer",
     "createdAt": "2026-04-30T12:03:52.063Z",
     "emailVerified": true,
-    "otpCode": "745964",
+    "otpCode": "444634",
     "otpPurpose": "reset",
-    "otpExpiresAt": 1777650208908
+    "otpExpiresAt": 1777663649451
   }
 ]
