@@ -133,7 +133,7 @@
     "id": "user-1777550632063",
     "name": "จอบละโว้",
     "email": "root2552@gmail.com",
-    "passwordHash": "$2b$10$jj.4A75WaR2NZRBfGWwEheWLkyEDfUgeY8agv7pRg44uxVN3bteaS",
+    "passwordHash": "$2b$10$Cula2CDo89meKuTMHAaznuD8EToyKAGh25Gjrw.05prGolqXxMyR.",
     "role": "customer",
     "createdAt": "2026-04-30T12:03:52.063Z",
     "emailVerified": true,
@@ -142,39 +142,15 @@
     "otpExpiresAt": ""
   },
   {
-    "id": "user-1777666504007",
-    "name": "ดิว",
-    "email": "root22@gmail.com",
-    "passwordHash": "$2b$10$ShLRd5jHPVkKx9Z4XFdw3ubQJzNOu3NfEpG//0D6Ai1KOh9cx2l3q",
-    "role": "customer",
-    "createdAt": "2026-05-01T20:15:04.007Z",
-    "emailVerified": false,
-    "otpCode": "872190",
-    "otpPurpose": "verify",
-    "otpExpiresAt": 1777666804007
-  },
-  {
-    "id": "user-1777666866882",
-    "name": "ฺไบโอ05",
+    "id": "user-1777820389279",
+    "name": "ไบโอ",
     "email": "biodiesel05@yahoo.com",
-    "passwordHash": "$2b$10$VFIq0QzGNpcBOOPc1vy97u.uz7sAWFaE.VFM/K3/uu7geDu9tKoTC",
+    "passwordHash": "$2b$10$pAESu20.MjP2tt54RYgvTuS/SJztSrBDHB4r3JCqS6hIG3aeVXOzy",
     "role": "customer",
-    "createdAt": "2026-05-01T20:21:06.882Z",
-    "emailVerified": false,
-    "otpCode": "163181",
+    "createdAt": "2026-05-03T14:59:49.279Z",
+    "emailVerified": true,
+    "otpCode": "",
     "otpPurpose": "verify",
-    "otpExpiresAt": 1777668649980
-  },
-  {
-    "id": "user-1777730664813",
-    "name": "มีชัย",
-    "email": "cassava2516@gmail.com",
-    "passwordHash": "$2b$10$vPPm0s5BtsfV6KUgXD.TR.pp2usNLqxIyNeUzzyuvntCyj5WIYfYe",
-    "role": "customer",
-    "createdAt": "2026-05-02T14:04:24.813Z",
-    "emailVerified": false,
-    "otpCode": "740844",
-    "otpPurpose": "verify",
-    "otpExpiresAt": 1777730964813
+    "otpExpiresAt": ""
   }
 ]
