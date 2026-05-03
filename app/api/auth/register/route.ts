@@ -35,6 +35,7 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const otp = generateOTP();
+    console.log("REGISTER OTP:", email, otp);
 
     const newUser = {
       id: "user-" + Date.now(),
@@ -53,8 +54,11 @@ export async function POST(req: Request) {
     fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
 
     // 🔥 ส่ง email จริง
-    await sendOTPEmail(email, otp);
+    console.log("REGISTER SEND EMAIL START:", email);
 
+await sendOTPEmail(email, otp);
+
+console.log("REGISTER SEND EMAIL SUCCESS:", email);
     return NextResponse.json({
       success: true,
       needVerify: true,

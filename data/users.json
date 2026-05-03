@@ -164,5 +164,17 @@
     "otpCode": "163181",
     "otpPurpose": "verify",
     "otpExpiresAt": 1777668649980
+  },
+  {
+    "id": "user-1777730664813",
+    "name": "มีชัย",
+    "email": "cassava2516@gmail.com",
+    "passwordHash": "$2b$10$vPPm0s5BtsfV6KUgXD.TR.pp2usNLqxIyNeUzzyuvntCyj5WIYfYe",
+    "role": "customer",
+    "createdAt": "2026-05-02T14:04:24.813Z",
+    "emailVerified": false,
+    "otpCode": "740844",
+    "otpPurpose": "verify",
+    "otpExpiresAt": 1777730964813
   }
 ]

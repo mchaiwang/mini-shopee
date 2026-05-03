@@ -1,1 +1,23 @@
-[]
+[
+  {
+    "id": "room_1777767825350_n65u29",
+    "productId": 1,
+    "productName": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+    "productSlug": "fip-care-andrographis",
+    "customerUserId": "user-1774102513149",
+    "customerName": "จำรัสฟาร์ม",
+    "status": "open",
+    "createdAt": "2026-05-03T00:23:45.350Z",
+    "updatedAt": "2026-05-03T00:23:45.350Z",
+    "expiresAt": "2026-06-02T00:23:45.350Z",
+    "messages": [
+      {
+        "id": "msg_1777767825350_xenykv",
+        "sender": "admin",
+        "senderName": "จำรัสฟาร์ม",
+        "message": "ทานซ้ำได้ไหมครับ ถ้ากลับมาเป็นอีก",
+        "createdAt": "2026-05-03T00:23:45.350Z"
+      }
+    ]
+  }
+]

@@ -455,8 +455,6 @@ const featureDot: React.CSSProperties = {
   fontWeight: 900,
   flexShrink: 0,
 };
-
-
 export default function LoginPage() {
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>
