@@ -1071,35 +1071,7 @@ useEffect(() => {
                   {product.stock <= 0 ? "สินค้าหมด" : "เพิ่มลงตะกร้า"}
                 </button>
 
-                <button
-                  onClick={() => buyNow(product)}
-                  disabled={product.stock <= 0}
-                  style={{
-                    minWidth: isMobile ? 0 : 220,
-                    width: "100%",
-                    height: isMobile ? 44 : 48,
-                    borderRadius: 8,
-                    border: "none",
-                    background: product.stock <= 0 ? "#d9d9d9" : "#ee4d2d",
-                    color: "#fff",
-                    cursor: product.stock <= 0 ? "not-allowed" : "pointer",
-                    fontWeight: 800,
-                    fontSize: isMobile ? 13 : 15,
-                    transition: "all 0.18s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (product.stock <= 0) return;
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 12px 22px rgba(238,77,45,0.24)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  ซื้อเลย
-                </button>
+               
 
                 <button
                   onClick={() => router.push(`/chat/product/${product.id}`)}

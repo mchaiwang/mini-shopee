@@ -56,7 +56,7 @@ type ProductRecord = {
   shortDescription?: string;
   category?: string;
   stock?: number;
-  descriptionLong?: string[];
+  descriptionLong?: string;
   careNote?: string;
 };
 
@@ -195,7 +195,7 @@ export default async function BrochurePage({
         shortDescription: product?.shortDescription || review.shortDescription || "",
         category: product?.category || "",
         stock: Number(product?.stock || 0),
-        descriptionLong: product?.descriptionLong || [],
+        descriptionLong: product?.descriptionLong || "",
         careNote: product?.careNote || "",
         reviewLink: productReviewLink,
         reviewId: review.id,

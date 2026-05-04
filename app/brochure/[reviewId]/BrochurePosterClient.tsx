@@ -18,7 +18,7 @@ type ProductInfo = {
   image: string;
   price: number;
   shortDescription: string;
-  descriptionLong: string[];
+  descriptionLong: string;
   careNote: string;
   reviewLink: string;
   reviewId: string;
@@ -302,7 +302,17 @@ export default function BrochurePosterClient({
               fontWeight: 800,
             }}
           >
-            www.fipแมว.com
+           <div
+  style={{
+    marginTop: 10,
+    fontSize: 20,
+    fontWeight: 900,
+    textAlign: "center",
+  }}
+>
+  🔎 เข้าเว็บ <span style={{ color: "#16a34a" }}>fipcatcare.com</span><br />
+  พิมพ์รหัสนี้ 👉 <span style={{ color: "#dc2626" }}>{creatorCode}</span>
+</div>
           </div>
         </div>
 
@@ -456,20 +466,19 @@ export default function BrochurePosterClient({
               {productInfo?.shortDescription || ""}
             </p>
 
-            {productInfo?.descriptionLong?.length ? (
-              <ul
-                style={{
-                  paddingLeft: 20,
-                  color: "#0f172a",
-                  lineHeight: 1.65,
-                  fontWeight: 700,
-                }}
-              >
-                {productInfo.descriptionLong.map((x, i) => (
-                  <li key={`${x}-${i}`}>{x}</li>
-                ))}
-              </ul>
-            ) : null}
+            {productInfo?.descriptionLong ? (
+  <div
+    style={{
+      marginTop: 12,
+      color: "#0f172a",
+      lineHeight: 1.65,
+      fontWeight: 700,
+      whiteSpace: "pre-line",
+    }}
+  >
+    {productInfo.descriptionLong}
+  </div>
+) : null}
 
             {productInfo?.careNote ? (
               <div
@@ -535,18 +544,17 @@ export default function BrochurePosterClient({
           </div>
 
           <div
-            style={{
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: "#065f46",
-              fontWeight: 700,
-            }}
-          >
-            เข้าเว็บ &quot;fipแมว.com&quot; ค้นหาคำว่า &quot;
-            {creatorCode || "1124"}&quot;
-            <br />
-            เพื่อดูประสบการณ์และแนวทางดูแลจากเคสจริงเพิ่มเติม
-          </div>
+  style={{
+    marginTop: 12,
+    textAlign: "center",
+    color: "#065f46",
+    lineHeight: 1.6,
+  }}
+>
+  เข้าที่เว็บไซต์ fipcatcare.com<br />
+  แล้วพิมพ์รหัส <span style={{ color: "#dc2626" }}>{creatorCode}</span>
+  <br />
+</div>
         </div>
       </div>
     </div>
