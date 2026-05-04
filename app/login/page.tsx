@@ -83,9 +83,18 @@ function LoginPageInner() {
         }
 
         setDevOtp(data?.devOtp || "");
-        alert("สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
-        setMode("verifyOtp");
-        return;
+
+setForm({
+  name: "",
+  email: form.email,
+  password: "",
+  otp: "",
+  newPassword: "",
+});
+
+alert("สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
+setMode("verifyOtp");
+return;
       }
 
       if (mode === "verifyOtp") {
@@ -327,7 +336,7 @@ function LoginPageInner() {
           {mode === "resetPassword" && (
             <input
               placeholder="รหัสผ่านใหม่"
-              type="password"
+              type="text"
               value={form.newPassword}
               onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
               style={inputStyle}

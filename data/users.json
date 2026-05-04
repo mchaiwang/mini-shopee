@@ -152,5 +152,17 @@
     "otpCode": "",
     "otpPurpose": "verify",
     "otpExpiresAt": ""
+  },
+  {
+    "id": "user-1777853190292",
+    "name": "คนไม่มีแฟน",
+    "email": "cassava2516@gmail.com",
+    "passwordHash": "$2b$10$zy5NJQh7d28N.dpQ4gF9HuB6YGhHmSdNBB6ZSIorJIf8rBlp8hDAK",
+    "role": "customer",
+    "createdAt": "2026-05-04T00:06:30.292Z",
+    "emailVerified": true,
+    "otpCode": "",
+    "otpPurpose": "verify",
+    "otpExpiresAt": ""
   }
 ]
