@@ -11,12 +11,21 @@ type UserMe = {
   role?: string;
 };
 
+// ✅ EXTENDED type with optional fields for product / image messages
 type ChatMessage = {
   id: string;
   sender: "customer" | "admin";
   senderName: string;
   message: string;
   createdAt: string;
+  // ===== ADDED FIELDS =====
+  type?: "text" | "product" | "image";
+  productId?: number;
+  productName?: string;
+  productSlug?: string;
+  productImage?: string;
+  imageUrl?: string;
+  // ========================
 };
 
 type InquiryRoom = {
@@ -24,6 +33,7 @@ type InquiryRoom = {
   productId: number;
   productName: string;
   productSlug: string;
+  productImage?: string;
   customerUserId: string;
   customerName: string;
   status: "open" | "closed";
@@ -51,6 +61,27 @@ function formatDateTime(dateString: string) {
   } catch {
     return dateString;
   }
+}
+
+// ✅ ADDED: helper that resolves a message's effective type with backward
+// compatibility for legacy messages stored without a `type` field.
+function getMessageType(msg: ChatMessage): "text" | "product" | "image" {
+  if (msg.type === "product" || msg.type === "image" || msg.type === "text") {
+    return msg.type;
+  }
+  return "text";
+}
+
+// ✅ ADDED: build a short preview for room list items (handles all 3 types)
+function getMessagePreview(msg: ChatMessage): string {
+  const t = getMessageType(msg);
+  if (t === "product") {
+    return `${msg.senderName}: [สินค้า] ${msg.productName || ""}`;
+  }
+  if (t === "image") {
+    return `${msg.senderName}: [รูปภาพ]`;
+  }
+  return `${msg.senderName}: ${msg.message}`;
 }
 
 function getUnreadCount(room: InquiryRoom) {
@@ -606,9 +637,8 @@ export default function MyChatsPage() {
                         fontWeight: unread > 0 ? 800 : 500,
                       }}
                     >
-                      {last
-                        ? `${last.senderName}: ${last.message}`
-                        : "ยังไม่มีข้อความ"}
+                      {/* ✅ MODIFIED: use type-aware preview */}
+                      {last ? getMessagePreview(last) : "ยังไม่มีข้อความ"}
                     </div>
                   </button>
                 );
@@ -692,89 +722,38 @@ export default function MyChatsPage() {
                     flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 900,
-                        color: "#ee4d2d",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      ห้องแชทสินค้า
-                    </div>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+  <img
+    src={selectedRoom?.productImage || "/no-image.png"}
+    alt={selectedRoom?.productName || "product"}
+    style={{
+      width: 60,
+      height: 60,
+      objectFit: "cover",
+      borderRadius: 12,
+      border: "1px solid #eee",
+      flexShrink: 0,
+    }}
+  />
 
-                    <div
-                      style={{
-                        marginTop: 6,
-                        fontSize: 16,
-                        fontWeight: 800,
-                        color: "#222",
-                        lineHeight: 1.4,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {selectedRoom.productName}
-                    </div>
+  <div style={{ minWidth: 0 }}>
+    <div
+      style={{
+        fontSize: 16,
+        fontWeight: 800,
+        color: "#222",
+        lineHeight: 1.4,
+        wordBreak: "break-word",
+      }}
+    >
+      {selectedRoom?.productName}
+    </div>
 
-                    <div
-                      style={{
-                        marginTop: 8,
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color:
-                            selectedRoom.status === "open"
-                              ? "#166534"
-                              : "#92400e",
-                          background:
-                            selectedRoom.status === "open"
-                              ? "#dcfce7"
-                              : "#fef3c7",
-                          borderRadius: 999,
-                          padding: "5px 10px",
-                          fontWeight: 800,
-                        }}
-                      >
-                        {selectedRoom.status === "open"
-                          ? "ห้องเปิดอยู่"
-                          : "ห้องถูกปิด"}
-                      </span>
-
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "#666",
-                          background: "#f5f5f5",
-                          borderRadius: 999,
-                          padding: "5px 10px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Product ID: {selectedRoom.productId}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: "#777",
-                        lineHeight: 1.7,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      room id: {selectedRoom.id}
-                      <br />
-                      สร้างเมื่อ: {formatDateTime(selectedRoom.createdAt)}
-                    </div>
-                  </div>
+    <div style={{ marginTop: 6, fontSize: 12, color: "#888" }}>
+      Product ID: {selectedRoom?.productId}
+    </div>
+  </div>
+</div>
 
                   <Link
                     href={`/chat/product/${selectedRoom.productId}`}
@@ -823,6 +802,8 @@ export default function MyChatsPage() {
                 ) : (
                   selectedRoom.messages.map((msg) => {
                     const isMine = msg.sender === "customer";
+                    // ✅ ADDED: resolve effective type with backward compat
+                    const msgType = getMessageType(msg);
 
                     return (
                       <div
@@ -851,24 +832,129 @@ export default function MyChatsPage() {
                             {msg.senderName}
                           </div>
 
-                          <div
-                            style={{
-                              background: isMine ? "linear-gradient(135deg,#ee4d2d,#ff7a45)" : "#ffffff",
-                              color: isMine ? "#fff" : "#222",
-                              border: isMine
-                                ? "1px solid #1677ff"
-                                : "1px solid #e5e7eb",
-                              borderRadius: 16,
-                              padding: "13px 16px",
-                              boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.7,
-                              fontSize: 14,
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {msg.message}
-                          </div>
+                          {/* ===== ADDED: branched rendering by type ===== */}
+                          {msgType === "product" ? (
+                            <div
+                              style={{
+                                background: "#ffffff",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 16,
+                                padding: 10,
+                                width: 260,
+                                boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={msg.productImage || "/no-image.png"}
+                                alt={msg.productName || "product"}
+                                style={{
+                                  width: "100%",
+                                  height: 160,
+                                  objectFit: "cover",
+                                  borderRadius: 10,
+                                  background: "#f5f5f5",
+                                  display: "block",
+                                }}
+                              />
+                              <div
+                                style={{
+                                  marginTop: 10,
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  color: "#111",
+                                  lineHeight: 1.4,
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {msg.productName || `สินค้า #${msg.productId}`}
+                              </div>
+                              <a
+                                href={
+                                  msg.productSlug
+                                    ? `/product/${msg.productSlug}`
+                                    : `#`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "block",
+                                  marginTop: 10,
+                                  textAlign: "center",
+                                  background: "#ee4d2d",
+                                  color: "#fff",
+                                  textDecoration: "none",
+                                  fontWeight: 800,
+                                  padding: "9px 12px",
+                                  borderRadius: 10,
+                                  fontSize: 13,
+                                }}
+                              >
+                                ดูสินค้า
+                              </a>
+                            </div>
+                          ) : msgType === "image" ? (
+                            <div
+                              style={{
+                                background: "#ffffff",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 14,
+                                padding: 6,
+                                boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={msg.imageUrl || ""}
+                                alt="image"
+                                style={{
+                                  display: "block",
+                                  maxWidth: 280,
+                                  maxHeight: 280,
+                                  borderRadius: 10,
+                                  objectFit: "cover",
+                                }}
+                              />
+                              {msg.message ? (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: 13,
+                                    color: "#222",
+                                    padding: "0 4px 4px",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {msg.message}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                background: "#fff7ed",
+                                color: "#111827",
+                                border: "2px solid #f97316",
+                                boxShadow: "0 8px 18px rgba(249,115,22,0.22)",
+                                borderRadius: 16,
+                                padding: "8px 12px",
+                                display: "inline-block",
+                                alignSelf: isMine ? "flex-end" : "flex-start",
+                                width: "fit-content",
+                                whiteSpace: "pre-wrap",
+                                lineHeight: 1.5,
+                                fontSize: 14,
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {msg.message}
+                            </div>
+                          )}
+                          {/* ============================================= */}
 
                           <div
                             style={{

@@ -5,12 +5,23 @@ import path from "path";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// ✅ EXTENDED: added optional fields for product / image messages.
+// All new fields are optional → backward compatible with old messages
+// stored in inquiries.json that don't have a `type` field.
 type InquiryMessage = {
   id: string;
   sender: "customer" | "admin";
   senderName: string;
   message: string;
   createdAt: string;
+  // ===== ADDED FIELDS =====
+  type?: "text" | "product" | "image";
+  productId?: number;
+  productName?: string;
+  productSlug?: string;
+  productImage?: string;
+  imageUrl?: string;
+  // ========================
 };
 
 type InquiryRoom = {
@@ -18,6 +29,7 @@ type InquiryRoom = {
   productId: number;
   productName: string;
   productSlug: string;
+  productImage?: string;
   customerUserId: string;
   customerName: string;
   status: "open" | "closed";
@@ -38,6 +50,7 @@ type ProductItem = {
   id: string | number;
   name?: string;
   slug?: string;
+  image?: string;
 };
 
 type Subscriber = {
@@ -178,6 +191,62 @@ function broadcastRoomUpdate(
   });
 }
 
+// ✅ ADDED: helper that builds a fully-typed message from the request body.
+// Centralises validation so POST and PUT behave consistently.
+// - "text"    → requires non-empty `message`
+// - "product" → requires productId; productName/Slug/Image enriched from products.json if missing
+// - "image"   → requires imageUrl (data URL or path)
+function buildMessageFromBody(
+  body: any,
+  sender: "customer" | "admin",
+  senderName: string,
+  createdAt: string
+): InquiryMessage | { error: string } {
+  const rawType = String(body?.type || "text").toLowerCase();
+  const type: "text" | "product" | "image" =
+    rawType === "product" || rawType === "image" ? rawType : "text";
+
+  const baseMsg: InquiryMessage = {
+    id: makeId("msg"),
+    sender,
+    senderName,
+    message: "",
+    createdAt,
+    type,
+  };
+
+  if (type === "text") {
+    const text = String(body?.message || "").trim();
+    if (!text) return { error: "ข้อความว่างเปล่า" };
+    baseMsg.message = text;
+    return baseMsg;
+  }
+
+  if (type === "image") {
+    const imageUrl = String(body?.imageUrl || "").trim();
+    if (!imageUrl) return { error: "ไม่พบรูปภาพ" };
+    baseMsg.imageUrl = imageUrl;
+    baseMsg.message = String(body?.message || "").trim(); // optional caption
+    return baseMsg;
+  }
+
+  // type === "product"
+  const productId = Number(body?.productId);
+  if (!productId) return { error: "ไม่พบสินค้าที่จะส่ง" };
+
+  // Pull canonical info from products.json, but allow client to override
+  const productInfo = getProductById(productId);
+  baseMsg.productId = productId;
+  baseMsg.productName =
+    String(body?.productName || productInfo?.name || `สินค้า ${productId}`);
+  baseMsg.productSlug = String(body?.productSlug || productInfo?.slug || "");
+  baseMsg.productImage = String(
+    body?.productImage || (productInfo as any)?.image || "/no-image.png"
+  );
+  baseMsg.message = String(body?.message || "").trim();
+  return baseMsg;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const me = getAuthUser(request);
@@ -269,6 +338,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// ✅ MODIFIED: POST now accepts text / product / image messages.
+// Old callers that send only { productId, message } continue to work unchanged
+// because buildMessageFromBody defaults type to "text".
 export async function POST(request: NextRequest) {
   try {
     const me = getAuthUser(request);
@@ -282,9 +354,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const productId = Number(body.productId);
-    const message = String(body.message || "").trim();
 
-    if (!productId || !message) {
+    if (!productId) {
       return NextResponse.json(
         { error: "ข้อมูลไม่ครบ" },
         { status: 400 }
@@ -315,6 +386,7 @@ export async function POST(request: NextRequest) {
         productId,
         productName: String(product.name || `สินค้า ${productId}`),
         productSlug: String(product.slug || ""),
+        productImage: (product as any).image || "/no-image.png",
         customerUserId: me.id,
         customerName: me.name,
         status: "open",
@@ -329,13 +401,20 @@ export async function POST(request: NextRequest) {
       rooms.unshift(room);
     }
 
-    room.messages.push({
-      id: makeId("msg"),
-      sender: me.role === "admin" ? "admin" : "customer",
-      senderName: me.name,
-      message,
-      createdAt: now,
-    });
+    // ===== USE NEW HELPER (was: hard-coded text message) =====
+    const built = buildMessageFromBody(
+      body,
+      me.role === "admin" ? "admin" : "customer",
+      me.name,
+      now
+    );
+
+    if ("error" in built) {
+      return NextResponse.json({ error: built.error }, { status: 400 });
+    }
+
+    room.messages.push(built);
+    // =========================================================
 
     room.updatedAt = now;
 
@@ -354,6 +433,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ✅ MODIFIED: PUT (admin reply) now also supports product / image messages.
+// Old payload { id, message } still works; old payload { id, status } still works.
 export async function PUT(request: NextRequest) {
   try {
     const me = getAuthUser(request);
@@ -367,7 +448,6 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     const roomId = String(body.id || "").trim();
-    const message = String(body.message || "").trim();
     const status = String(body.status || "").trim();
 
     if (!roomId) {
@@ -390,16 +470,33 @@ export async function PUT(request: NextRequest) {
     const room = rooms[roomIndex];
     const now = nowIso();
 
-    if (message) {
-      room.messages.push({
-        id: makeId("msg"),
-        sender: "admin",
-        senderName: me.name || "Admin",
-        message,
-        createdAt: now,
-      });
+    // ===== Detect "is this a message send?" =====
+    // We treat the request as a message-send if any of these are present:
+    //   - body.message (legacy text payload)
+    //   - body.type === "product" with productId
+    //   - body.type === "image" with imageUrl
+    const rawType = String(body?.type || "").toLowerCase();
+    const hasMessagePayload =
+      Boolean(String(body?.message || "").trim()) ||
+      (rawType === "product" && Boolean(Number(body?.productId))) ||
+      (rawType === "image" && Boolean(String(body?.imageUrl || "").trim()));
+
+    if (hasMessagePayload) {
+      const built = buildMessageFromBody(
+        body,
+        "admin",
+        me.name || "Admin",
+        now
+      );
+
+      if ("error" in built) {
+        return NextResponse.json({ error: built.error }, { status: 400 });
+      }
+
+      room.messages.push(built);
       room.updatedAt = now;
     }
+    // ============================================
 
     if (status === "open" || status === "closed") {
       room.status = status;

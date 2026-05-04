@@ -630,8 +630,8 @@ export default function CheckoutPage() {
                   }}
                 >
                   <div>ธนาคาร: กสิกรไทย</div>
-                  <div>ชื่อบัญชี: Herbal Store</div>
-                  <div>เลขที่บัญชี: 123-4-56789-0</div>
+                  <div>ชื่อบัญชี: มีชัย หวังศุภกิจโกศล</div>
+                  <div>เลขที่บัญชี: 123-2-38369-7</div>
                 </div>
 
                 <div

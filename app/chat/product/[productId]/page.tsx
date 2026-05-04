@@ -10,12 +10,21 @@ type UserMe = {
   role?: string;
 };
 
+// ✅ EXTENDED type with optional fields for product / image messages
 type ChatMessage = {
   id: string;
   sender: "customer" | "admin";
   senderName: string;
   message: string;
   createdAt: string;
+  // ===== ADDED FIELDS =====
+  type?: "text" | "product" | "image";
+  productId?: number;
+  productName?: string;
+  productSlug?: string;
+  productImage?: string;
+  imageUrl?: string;
+  // ========================
 };
 
 type InquiryRoom = {
@@ -64,6 +73,15 @@ function formatDateTime(dateString: string) {
   }
 }
 
+// ✅ ADDED: helper that resolves a message's effective type with backward
+// compatibility for legacy messages stored without a `type` field.
+function getMessageType(msg: ChatMessage): "text" | "product" | "image" {
+  if (msg.type === "product" || msg.type === "image" || msg.type === "text") {
+    return msg.type;
+  }
+  return "text";
+}
+
 export default function ProductChatPage() {
   const params = useParams();
   const router = useRouter();
@@ -76,6 +94,11 @@ export default function ProductChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
+
+  // ===== ADDED: image upload state =====
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // ======================================
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -239,6 +262,8 @@ export default function ProductChatPage() {
         body: JSON.stringify({
           productId,
           message: message.trim(),
+          // ✅ ADDED (explicit, but optional — backend defaults to "text")
+          type: "text",
         }),
       });
 
@@ -263,6 +288,60 @@ export default function ProductChatPage() {
       setSending(false);
     }
   };
+
+  // ===== ADDED: send image as base64 =====
+  const sendImageMessage = async (file: File) => {
+    if (uploadingImage) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert("ไฟล์รูปใหญ่เกินไป (สูงสุด 3 MB)");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("read failed"));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          type: "image",
+          imageUrl: dataUrl,
+          message: "",
+        }),
+      });
+
+      if (res.status === 401) {
+        goLogin();
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(data?.error || "ส่งรูปไม่สำเร็จ");
+        return;
+      }
+
+      setRoom(data?.room || null);
+      scrollToBottom();
+    } catch (error) {
+      console.error("sendImageMessage failed:", error);
+      alert("ส่งรูปไม่สำเร็จ");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+  // =========================================
 
   const title = useMemo(() => {
     if (product?.name) return product.name;
@@ -398,20 +477,23 @@ export default function ProductChatPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => router.back()}
-            style={{
-              border: "1px solid #ddd",
-              background: "#fff",
-              borderRadius: 10,
-              padding: "10px 14px",
-              cursor: "pointer",
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            กลับ
-          </button>
+<button
+  type="button"
+  onClick={() => {
+    window.location.href = "/my-chats";
+  }}
+  style={{
+    background: "#f97316",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    padding: "6px 14px",
+    cursor: "pointer",
+    fontWeight: 600,
+  }}
+>
+  กลับ
+</button>
         </div>
 
         <div
@@ -447,6 +529,8 @@ export default function ProductChatPage() {
           ) : (
             room.messages.map((msg) => {
               const isMine = msg.sender === "customer";
+              // ✅ ADDED: resolve effective type with backward compat
+              const msgType = getMessageType(msg);
 
               return (
                 <div
@@ -475,24 +559,127 @@ export default function ProductChatPage() {
                       {msg.senderName}
                     </div>
 
-                    <div
-                      style={{
-                        background: isMine ? "linear-gradient(135deg,#ee4d2d,#ff7a45)" : "#ffffff",
-                        color: isMine ? "#fff" : "#222",
-                        border: isMine
-                          ? "1px solid #ee4d2d"
-                          : "1px solid #d8dee9",
-                        borderRadius: 16,
-                        padding: "13px 16px",
-                        boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
-                        whiteSpace: "pre-wrap",
-                        lineHeight: 1.7,
-                        fontSize: 14,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {msg.message}
-                    </div>
+                    {/* ===== ADDED: branched rendering by type ===== */}
+                    {msgType === "product" ? (
+                      <div
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 16,
+                          padding: 10,
+                          width: 260,
+                          boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={msg.productImage || "/no-image.png"}
+                          alt={msg.productName || "product"}
+                          style={{
+                            width: "100%",
+                            height: 160,
+                            objectFit: "cover",
+                            borderRadius: 10,
+                            background: "#f5f5f5",
+                            display: "block",
+                          }}
+                        />
+                        <div
+                          style={{
+                            marginTop: 10,
+                            fontSize: 14,
+                            fontWeight: 800,
+                            color: "#111",
+                            lineHeight: 1.4,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {msg.productName || `สินค้า #${msg.productId}`}
+                        </div>
+                        <a
+                          href={
+                            msg.productSlug
+                              ? `/product/${msg.productSlug}`
+                              : `#`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            marginTop: 10,
+                            textAlign: "center",
+                            background: "#ee4d2d",
+                            color: "#fff",
+                            textDecoration: "none",
+                            fontWeight: 800,
+                            padding: "9px 12px",
+                            borderRadius: 10,
+                            fontSize: 13,
+                          }}
+                        >
+                          ดูสินค้า
+                        </a>
+                      </div>
+                    ) : msgType === "image" ? (
+                      <div
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 14,
+                          padding: 6,
+                          boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={msg.imageUrl || ""}
+                          alt="image"
+                          style={{
+                            display: "block",
+                            maxWidth: 280,
+                            maxHeight: 280,
+                            borderRadius: 10,
+                            objectFit: "cover",
+                          }}
+                        />
+                        {msg.message ? (
+                          <div
+                            style={{
+                              marginTop: 6,
+                              fontSize: 13,
+                              color: "#222",
+                              padding: "0 4px 4px",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {msg.message}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          background: "#ffffff",
+                          color: "#111827",
+                          border: "1.5px solid #f97316",
+                          borderRadius: 16,
+                          padding: "8px 12px",
+                          display: "inline-block",
+                          alignSelf: isMine ? "flex-end" : "flex-start",
+                          width: "fit-content",
+                          lineHeight: 1.5,
+                          fontSize: 14,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {msg.message}
+                      </div>
+                    )}
+                    {/* ============================================= */}
 
                     <div
                       style={{
@@ -520,14 +707,50 @@ export default function ProductChatPage() {
             background: "#fff",
           }}
         >
+          {/* ===== ADDED: hidden file input for image upload ===== */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) sendImageMessage(file);
+            }}
+          />
+          {/* ====================================================== */}
+
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: 10,
+              gridTemplateColumns: "auto 1fr auto",
+              gap: 8,
               alignItems: "end",
             }}
           >
+            {/* ===== ADDED: image upload button for customer ===== */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              title="ส่งรูปภาพ"
+              style={{
+                width: 46,
+                height: 46,
+                border: "1px solid #1677ff",
+                background: "#fff",
+                color: "#1677ff",
+                borderRadius: 12,
+                fontSize: 18,
+                fontWeight: 900,
+                cursor: uploadingImage ? "not-allowed" : "pointer",
+                lineHeight: 1,
+              }}
+            >
+              {uploadingImage ? "..." : "🖼"}
+            </button>
+            {/* ====================================================== */}
+
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}

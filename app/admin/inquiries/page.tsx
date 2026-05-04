@@ -9,12 +9,21 @@ type UserMe = {
   role?: string;
 };
 
+// ✅ EXTENDED type with optional fields for product / image messages
 type ChatMessage = {
   id: string;
   sender: "customer" | "admin";
   senderName: string;
   message: string;
   createdAt: string;
+  // ===== ADDED FIELDS =====
+  type?: "text" | "product" | "image";
+  productId?: number;
+  productName?: string;
+  productSlug?: string;
+  productImage?: string;
+  imageUrl?: string;
+  // ========================
 };
 
 type InquiryRoom = {
@@ -37,6 +46,15 @@ type StreamPayload = {
   at?: string;
 };
 
+// ✅ ADDED: lightweight Product type used only by the product-picker popup
+type ProductLite = {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  image: string;
+};
+
 function formatDateTime(dateString: string) {
   try {
     return new Date(dateString).toLocaleString("th-TH", {
@@ -51,6 +69,15 @@ function formatDateTime(dateString: string) {
   }
 }
 
+// ✅ ADDED: helper that resolves a message's effective type with backward
+// compatibility for legacy messages stored without a `type` field.
+function getMessageType(msg: ChatMessage): "text" | "product" | "image" {
+  if (msg.type === "product" || msg.type === "image" || msg.type === "text") {
+    return msg.type;
+  }
+  return "text";
+}
+
 export default function AdminInquiriesPage() {
   const [me, setMe] = useState<UserMe | null>(null);
   const [rooms, setRooms] = useState<InquiryRoom[]>([]);
@@ -60,6 +87,23 @@ export default function AdminInquiriesPage() {
   const [sending, setSending] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
   const [search, setSearch] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // ===== ADDED: state for product picker popup & image upload =====
+  const [showProductPicker, setShowProductPicker] = useState(false);
+  const [products, setProducts] = useState<ProductLite[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // ================================================================
+
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth <= 820);
+  check();
+  window.addEventListener("resize", check);
+  return () => window.removeEventListener("resize", check);
+}, []);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -266,6 +310,8 @@ export default function AdminInquiriesPage() {
         body: JSON.stringify({
           id: selectedRoom.id,
           message: message.trim(),
+          // ✅ ADDED (explicit, but optional — backend defaults to "text")
+          type: "text",
         }),
       });
 
@@ -307,6 +353,152 @@ export default function AdminInquiriesPage() {
       setSending(false);
     }
   };
+
+  // ===== ADDED: send a product card =====
+  const sendProductMessage = async (product: ProductLite) => {
+    if (!selectedRoom?.id || sending) return;
+
+    try {
+      setSending(true);
+
+      const res = await fetch("/api/inquiries", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedRoom.id,
+          type: "product",
+          productId: product.id,
+          productName: product.name,
+          productSlug: product.slug,
+          productImage: product.image,
+          message: "",
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(data?.error || "ส่งสินค้าไม่สำเร็จ");
+        return;
+      }
+
+      if (data?.room) {
+        setRooms((prev) =>
+          [data.room, ...prev.filter((room) => room.id !== data.room.id)].sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime()
+          )
+        );
+        setSelectedRoomId(data.room.id);
+      }
+
+      setShowProductPicker(false);
+      scrollToBottom();
+    } catch (error) {
+      console.error("sendProductMessage failed:", error);
+      alert("ส่งสินค้าไม่สำเร็จ");
+    } finally {
+      setSending(false);
+    }
+  };
+  // =======================================
+
+  // ===== ADDED: send an image message (base64 data URL) =====
+  const sendImageMessage = async (file: File) => {
+    if (!selectedRoom?.id || uploadingImage) return;
+
+    // Soft size guard — keep JSON storage manageable.
+    // 4 MB raw → ~5.5 MB base64. Reject above ~3 MB to stay safe.
+    if (file.size > 3 * 1024 * 1024) {
+      alert("ไฟล์รูปใหญ่เกินไป (สูงสุด 3 MB)");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("read failed"));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/inquiries", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedRoom.id,
+          type: "image",
+          imageUrl: dataUrl,
+          message: "",
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(data?.error || "ส่งรูปไม่สำเร็จ");
+        return;
+      }
+
+      if (data?.room) {
+        setRooms((prev) =>
+          [data.room, ...prev.filter((room) => room.id !== data.room.id)].sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime()
+          )
+        );
+        setSelectedRoomId(data.room.id);
+      }
+
+      scrollToBottom();
+    } catch (error) {
+      console.error("sendImageMessage failed:", error);
+      alert("ส่งรูปไม่สำเร็จ");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+  // ==========================================================
+
+  // ===== ADDED: load product list when picker opens =====
+  const openProductPicker = async () => {
+    setShowProductPicker(true);
+    if (products.length > 0) return; // cache after first load
+
+    try {
+      setProductsLoading(true);
+      const res = await fetch("/api/products", { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      const list: ProductLite[] = Array.isArray(data?.products)
+        ? data.products.map((p: any) => ({
+            id: Number(p.id),
+            name: String(p.name || ""),
+            slug: String(p.slug || ""),
+            price: Number(p.price) || 0,
+            image: String(p.image || "/no-image.png"),
+          }))
+        : [];
+      setProducts(list);
+    } catch (e) {
+      console.error("loadProducts failed:", e);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const filteredProducts = useMemo(() => {
+    const q = productSearch.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) =>
+      [p.name, p.slug, String(p.id)].join(" ").toLowerCase().includes(q)
+    );
+  }, [products, productSearch]);
+  // =======================================================
 
   const updateStatus = async (status: "open" | "closed") => {
     if (!selectedRoom?.id) return;
@@ -401,7 +593,7 @@ export default function AdminInquiriesPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "360px minmax(0,1fr)",
+          gridTemplateColumns: isMobile ? "1fr" : "360px minmax(0,1fr)",
           gap: 16,
         }}
       >
@@ -522,6 +714,19 @@ export default function AdminInquiriesPage() {
                 const last = room.messages[room.messages.length - 1];
                 const active = room.id === selectedRoomId;
 
+                // ✅ ADDED: render preview text by message type
+                let lastPreview = "ยังไม่มีข้อความ";
+                if (last) {
+                  const t = getMessageType(last);
+                  if (t === "product") {
+                    lastPreview = `${last.senderName}: [สินค้า] ${last.productName || ""}`;
+                  } else if (t === "image") {
+                    lastPreview = `${last.senderName}: [รูปภาพ]`;
+                  } else {
+                    lastPreview = `${last.senderName}: ${last.message}`;
+                  }
+                }
+
                 return (
                   <button
                     key={room.id}
@@ -613,9 +818,7 @@ export default function AdminInquiriesPage() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {last
-                        ? `${last.senderName}: ${last.message}`
-                        : "ยังไม่มีข้อความ"}
+                      {lastPreview}
                     </div>
                   </button>
                 );
@@ -821,9 +1024,9 @@ export default function AdminInquiriesPage() {
 
               <div
                 style={{
-                  height: "62vh",
-                  minHeight: 420,
-                  maxHeight: "72vh",
+                  height: isMobile ? "48vh" : "62vh",
+minHeight: isMobile ? 260 : 420,
+maxHeight: isMobile ? "52vh" : "72vh",
                   overflowY: "auto",
                   padding: 16,
                   background: "#f6f8fb",
@@ -850,6 +1053,8 @@ export default function AdminInquiriesPage() {
                 ) : (
                   selectedRoom.messages.map((msg) => {
                     const isMine = msg.sender === "admin";
+                    // ✅ ADDED: resolve effective type with backward compat
+                    const msgType = getMessageType(msg);
 
                     return (
                       <div
@@ -878,24 +1083,128 @@ export default function AdminInquiriesPage() {
                             {msg.senderName}
                           </div>
 
-                          <div
-                            style={{
-                              background: isMine ? "linear-gradient(135deg,#ee4d2d,#ff7a45)" : "#ffffff",
-                              color: isMine ? "#fff" : "#222",
-                              border: isMine
-                                ? "1px solid #1677ff"
-                                : "1px solid #e5e7eb",
-                              borderRadius: 16,
-                              padding: "13px 16px",
-                              boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.7,
-                              fontSize: 14,
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {msg.message}
-                          </div>
+                          {/* ===== ADDED: branched rendering by type ===== */}
+                          {msgType === "product" ? (
+                            <div
+                              style={{
+                                background: "#ffffff",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 16,
+                                padding: 10,
+                                width: 260,
+                                boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={msg.productImage || "/no-image.png"}
+                                alt={msg.productName || "product"}
+                                style={{
+                                  width: "100%",
+                                  height: 160,
+                                  objectFit: "cover",
+                                  borderRadius: 10,
+                                  background: "#f5f5f5",
+                                  display: "block",
+                                }}
+                              />
+                              <div
+                                style={{
+                                  marginTop: 10,
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  color: "#111",
+                                  lineHeight: 1.4,
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {msg.productName || `สินค้า #${msg.productId}`}
+                              </div>
+                              <a
+                                href={
+                                  msg.productSlug
+                                    ? `/product/${msg.productSlug}`
+                                    : `#`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "block",
+                                  marginTop: 10,
+                                  textAlign: "center",
+                                  background: "#ee4d2d",
+                                  color: "#fff",
+                                  textDecoration: "none",
+                                  fontWeight: 800,
+                                  padding: "9px 12px",
+                                  borderRadius: 10,
+                                  fontSize: 13,
+                                }}
+                              >
+                                ดูสินค้า
+                              </a>
+                            </div>
+                          ) : msgType === "image" ? (
+                            <div
+                              style={{
+                                background: "#ffffff",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 14,
+                                padding: 6,
+                                boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={msg.imageUrl || ""}
+                                alt="image"
+                                style={{
+                                  display: "block",
+                                  maxWidth: 280,
+                                  maxHeight: 280,
+                                  borderRadius: 10,
+                                  objectFit: "cover",
+                                }}
+                              />
+                              {msg.message ? (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: 13,
+                                    color: "#222",
+                                    padding: "0 4px 4px",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {msg.message}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                background: isMine ? "linear-gradient(135deg,#ee4d2d,#ff7a45)" : "#ffffff",
+                                color: isMine ? "#fff" : "#222",
+                                border: isMine
+                                  ? "1px solid #1677ff"
+                                  : "1px solid #e5e7eb",
+                                borderRadius: 16,
+                                padding: "13px 16px",
+                                boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                                whiteSpace: "pre-wrap",
+                                lineHeight: 1.7,
+                                fontSize: 14,
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {msg.message}
+                            </div>
+                          )}
+                          {/* ============================================= */}
 
                           <div
                             style={{
@@ -923,14 +1232,81 @@ export default function AdminInquiriesPage() {
                   background: "#fff",
                 }}
               >
+                {/* ===== ADDED: hidden file input for image upload ===== */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) sendImageMessage(file);
+                  }}
+                />
+                {/* ====================================================== */}
+
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    gap: 10,
+                    gridTemplateColumns: isMobile ? "1fr" : "auto auto 1fr auto",
+                    gap: 8,
                     alignItems: "end",
                   }}
                 >
+                  {/* ===== ADDED: + button to open product picker ===== */}
+                  <button
+                    type="button"
+                    onClick={openProductPicker}
+                    disabled={selectedRoom.status === "closed" || sending}
+                    title="ส่งสินค้า"
+                    style={{
+                      width: 46,
+                      height: 46,
+                      border: "1px solid #ee4d2d",
+                      background: "#fff",
+                      color: "#ee4d2d",
+                      borderRadius: 12,
+                      fontSize: 22,
+                      fontWeight: 900,
+                      cursor:
+                        selectedRoom.status === "closed" || sending
+                          ? "not-allowed"
+                          : "pointer",
+                      lineHeight: 1,
+                    }}
+                  >
+                    +
+                  </button>
+                  {/* ====================================================== */}
+
+                  {/* ===== ADDED: image upload button ===== */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={
+                      selectedRoom.status === "closed" || uploadingImage
+                    }
+                    title="ส่งรูปภาพ"
+                    style={{
+                      width: 46,
+                      height: 46,
+                      border: "1px solid #1677ff",
+                      background: "#fff",
+                      color: "#1677ff",
+                      borderRadius: 12,
+                      fontSize: 18,
+                      fontWeight: 900,
+                      cursor:
+                        selectedRoom.status === "closed" || uploadingImage
+                          ? "not-allowed"
+                          : "pointer",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {uploadingImage ? "..." : "🖼"}
+                  </button>
+                  {/* ============================================ */}
+
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -962,7 +1338,7 @@ export default function AdminInquiriesPage() {
                       selectedRoom.status === "closed"
                     }
                     style={{
-                      minWidth: 120,
+                      minWidth: isMobile ? "100%" : 120,
                       height: 46,
                       border: "none",
                       borderRadius: 12,
@@ -1004,6 +1380,178 @@ export default function AdminInquiriesPage() {
         </div>
       </div>
     </div>
+
+    {/* ============= ADDED: PRODUCT PICKER POPUP MODAL ============= */}
+    {showProductPicker ? (
+      <div
+        onClick={() => setShowProductPicker(false)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.45)",
+          display: "grid",
+          placeItems: "center",
+          zIndex: 9999,
+          padding: 16,
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            width: "100%",
+            maxWidth: 720,
+            maxHeight: "85vh",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+          }}
+        >
+          <div
+            style={{
+              padding: "14px 18px",
+              borderBottom: "1px solid #f1f1f1",
+              background: "linear-gradient(90deg,#fff7f2 0%,#ffffff 100%)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: "#ee4d2d",
+              }}
+            >
+              เลือกสินค้าเพื่อส่งให้ลูกค้า
+            </div>
+            <button
+              onClick={() => setShowProductPicker(false)}
+              style={{
+                border: "none",
+                background: "#f5f5f5",
+                borderRadius: 10,
+                padding: "8px 12px",
+                cursor: "pointer",
+                fontWeight: 800,
+              }}
+            >
+              ปิด
+            </button>
+          </div>
+
+          <div style={{ padding: 14, borderBottom: "1px solid #f1f1f1" }}>
+            <input
+              autoFocus
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="ค้นหาชื่อสินค้า / slug / id"
+              style={{
+                width: "100%",
+                borderRadius: 10,
+                border: "1px solid #d9d9d9",
+                padding: "11px 14px",
+                fontSize: 14,
+                outline: "none",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              overflowY: "auto",
+              flex: 1,
+              padding: 12,
+              background: "#f8fafc",
+            }}
+          >
+            {productsLoading ? (
+              <div style={{ padding: 24, textAlign: "center", color: "#777" }}>
+                กำลังโหลดสินค้า...
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", color: "#777" }}>
+                ไม่พบสินค้า
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile
+                    ? "1fr"
+                    : "repeat(2, minmax(0,1fr))",
+                  gap: 10,
+                }}
+              >
+                {filteredProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => sendProductMessage(p)}
+                    disabled={sending}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                      padding: 10,
+                      background: "#fff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 12,
+                      cursor: sending ? "not-allowed" : "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.image || "/no-image.png"}
+                      alt={p.name}
+                      style={{
+                        width: 64,
+                        height: 64,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        background: "#f5f5f5",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: "#111",
+                          lineHeight: 1.4,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {p.name}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 13,
+                          color: "#ee4d2d",
+                          fontWeight: 800,
+                        }}
+                      >
+                        ฿{p.price.toLocaleString()}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ) : null}
+    {/* ================================================================ */}
     </>
   );
 }
