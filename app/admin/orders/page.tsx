@@ -41,6 +41,14 @@ type Order = {
   updatedAt?: string;
 };
 
+type SenderInfo = {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  isDefault?: boolean;
+};
+
 
 function buildCalendarDate(value: string, endOfDay = false) {
   if (!value) return null;
@@ -87,6 +95,18 @@ function getThaiDateKey(order: Order) {
 }
 
 export default function AdminOrdersPage() {
+    
+  
+  const fallbackSender: SenderInfo = {
+    id: "sender-main",
+    name: "จำรัสฟาร์ม",
+    phone: "084-428-4363",
+    address: "ใส่ที่อยู่ผู้ส่งตรงนี้",
+    isDefault: true,
+  };
+
+  const [senders, setSenders] = useState<SenderInfo[]>([fallbackSender]);
+  const [selectedSenderId, setSelectedSenderId] = useState("sender-main");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string>("");
@@ -120,6 +140,38 @@ export default function AdminOrdersPage() {
     loadOrders();
   }, []);
 
+  useEffect(() => {
+    fetch("/api/shipping-senders", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        const list: SenderInfo[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.senders)
+            ? data.senders
+            : [];
+
+        const cleaned = list
+          .filter((item) => item && item.id)
+          .map((item) => ({
+            id: String(item.id),
+            name: item.name || "ผู้ส่ง",
+            phone: item.phone || "-",
+            address: item.address || "-",
+            isDefault: item.isDefault === true,
+          }));
+
+        const finalList = cleaned.length > 0 ? cleaned : [fallbackSender];
+        const defaultSender =
+          finalList.find((item) => item.isDefault) || finalList[0] || fallbackSender;
+
+        setSenders(finalList);
+        setSelectedSenderId(defaultSender.id);
+      })
+      .catch(() => {
+        setSenders([fallbackSender]);
+        setSelectedSenderId(fallbackSender.id);
+      });
+  }, []);
   async function updateStatus(id: string, status: string) {
     try {
       setUpdatingId(id);
@@ -449,6 +501,199 @@ export default function AdminOrdersPage() {
     return order.note?.trim() || order.shippingAddress?.note?.trim() || "-";
   }
 
+  function getSelectedSender() {
+    return senders.find((item) => item.id === selectedSenderId) || senders[0] || fallbackSender;
+  }
+
+function escapeHtml(value: unknown) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function buildShippingLabelHtml(order: Order, index: number, totalCount: number) {
+    const sender = getSelectedSender();
+    const isCOD = order.paymentMethod === "cod";
+    const total = Number(order.total || 0).toLocaleString("th-TH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    const itemText = (order.items || [])
+      .map((item, itemIndex) => {
+        const name = item.name || item.title || `สินค้า ${itemIndex + 1}`;
+        const qty = Number(item.qty || item.quantity || 1);
+        return `<li>${escapeHtml(name)} x ${qty}</li>`;
+      })
+      .join("");
+
+    return `
+      <section class="label-page">
+        <div class="label">
+          <div class="top">
+            <div>
+              <div class="brand">${escapeHtml(sender.name)}</div>
+              <div class="muted">ใบปะหน้าพัสดุ ${index + 1}/${totalCount}</div>
+            </div>
+            <div class="order">ORDER<br/>${escapeHtml(order.id)}</div>
+          </div>
+
+          ${
+            isCOD
+              ? `<div class="cod">COD เก็บเงินปลายทาง<br/>ยอดเก็บ ฿${total}</div>`
+              : `<div class="paid">ชำระเงินแล้ว / ไม่เก็บเงินปลายทาง</div>`
+          }
+
+          <div class="section receiver">
+            <div class="title">ผู้รับ</div>
+            <div class="name">${escapeHtml(getRecipientName(order))}</div>
+            <div class="text">โทร: ${escapeHtml(getPhone(order))}</div>
+            <div class="text">ที่อยู่: ${escapeHtml(getAddress(order))}</div>
+            <div class="small">หมายเหตุ: ${escapeHtml(getNote(order))}</div>
+          </div>
+
+          <div class="section">
+            <div class="title">ผู้ส่ง</div>
+            <div class="text">${escapeHtml(sender.name)}</div>
+            <div class="text">โทร: ${escapeHtml(sender.phone)}</div>
+            <div class="text">ที่อยู่: ${escapeHtml(sender.address)}</div>
+          </div>
+
+          <div class="section product-section">
+            <div class="title">รายการสินค้า</div>
+            <ul class="small">${itemText || "<li>-</li>"}</ul>
+          </div>
+
+          <div class="footer-row">
+            <div>Order ID: ${escapeHtml(order.id)}</div>
+            <div>พิมพ์: ${new Date().toLocaleString("th-TH")}</div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function openPrintWindowForOrders(targetOrders: Order[]) {
+    if (targetOrders.length === 0) {
+      alert("กรุณาเลือกออเดอร์ก่อนพิมพ์ใบปะหน้า");
+      return;
+    }
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+
+    const labelsHtml = targetOrders
+      .map((order, index) => buildShippingLabelHtml(order, index, targetOrders.length))
+      .join("");
+
+    const html = `
+<html>
+<head>
+<title>พิมพ์ใบปะหน้าพัสดุ ${targetOrders.length} รายการ</title>
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; margin: 0; color: #111; background: #fff; }
+  .label-page {
+    width: 190mm;
+    height: 250mm;
+    page-break-after: always;
+    break-after: page;
+  }
+  .label-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .label {
+    width: 190mm;
+    height: 250mm;
+    border: 3px solid #000;
+    padding: 11mm;
+    overflow: hidden;
+  }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10mm;
+    border-bottom: 3px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .brand { font-size: 24px; font-weight: 900; }
+  .muted { font-size: 12px; margin-top: 4px; color: #333; }
+  .order { font-size: 18px; font-weight: 900; text-align: right; word-break: break-all; }
+  .cod {
+    border: 4px solid #000;
+    color: #d60000;
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 900;
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .paid {
+    border: 3px solid #000;
+    color: #111;
+    font-size: 22px;
+    font-weight: 900;
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .section {
+    border: 2px solid #111;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .receiver { min-height: 76mm; }
+  .product-section { max-height: 45mm; overflow: hidden; }
+  .title {
+    font-size: 18px;
+    font-weight: 900;
+    border-bottom: 1px solid #999;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+  }
+  .name { font-size: 26px; font-weight: 900; line-height: 1.25; margin-bottom: 6px; }
+  .text { font-size: 18px; line-height: 1.42; word-break: break-word; }
+  .small { font-size: 14px; line-height: 1.35; word-break: break-word; }
+  ul.small { margin: 0; padding-left: 22px; }
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 2px dashed #111;
+    padding-top: 8px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body onload="window.print()">
+  ${labelsHtml}
+</body>
+</html>
+`;
+
+    win.document.write(html);
+    win.document.close();
+  }
+
+  function printShippingLabelA4(order: Order) {
+    openPrintWindowForOrders([order]);
+  }
+
+  function printSelectedShippingLabelsA4() {
+    const selectedOrders = filteredOrders.filter((order) =>
+      selectedOrderIds.includes(order.id)
+    );
+
+    openPrintWindowForOrders(selectedOrders);
+  }
   const filteredOrders = useMemo(() => {
     const fromDate = buildCalendarDate(dateFrom, false);
     const toDate = buildCalendarDate(dateTo, true);
@@ -733,6 +978,29 @@ export default function AdminOrdersPage() {
           )}
         </div>
 
+        <div style={senderSelectCardStyle}>
+          <div>
+            <div style={senderSelectTitleStyle}>ผู้ส่งสำหรับใบปะหน้า</div>
+            <div style={senderSelectSubStyle}>เลือกที่อยู่ผู้ส่งก่อนพิมพ์ใบปะหน้า</div>
+          </div>
+
+          <select
+            value={selectedSenderId}
+            onChange={(e) => setSelectedSenderId(e.target.value)}
+            style={senderSelectStyle}
+          >
+            {senders.map((sender) => (
+              <option key={sender.id} value={sender.id}>
+                {sender.name} • {sender.phone}
+              </option>
+            ))}
+          </select>
+
+          <Link href="/admin/shipping-senders" style={senderManageButtonStyle}>
+            แก้ไขผู้ส่ง
+          </Link>
+        </div>
+
         <div style={batchBarStyle}>
           <div style={batchTextStyle}>เลือกแล้ว {selectedOrderIds.length} ออเดอร์</div>
           <button
@@ -744,6 +1012,18 @@ export default function AdminOrdersPage() {
           </button>
           <button type="button" onClick={clearSelectedOrders} style={batchSoftButtonStyle}>
             ยกเลิกเลือก
+          </button>
+          <button
+            type="button"
+            onClick={printSelectedShippingLabelsA4}
+            disabled={selectedOrderIds.length === 0}
+            style={{
+              ...batchPrintButtonStyle,
+              opacity: selectedOrderIds.length === 0 ? 0.55 : 1,
+              cursor: selectedOrderIds.length === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            🖨 พิมพ์ใบปะหน้าที่เลือก
           </button>
           <button
             type="button"
@@ -1132,6 +1412,7 @@ export default function AdminOrdersPage() {
                       </div>
                       <div style={infoRow}>
                         <strong>หมายเหตุ:</strong> {getNote(order)}
+                        
                       </div>
                     </section>
 
@@ -1276,6 +1557,21 @@ export default function AdminOrdersPage() {
                     </section>
 
                     <section style={sectionStyle}>
+                      {order.status === "รอจัดส่ง" && (
+  <button
+    onClick={() => printShippingLabelA4(order)}
+    style={{
+      background: "#000",
+      color: "#fff",
+      padding: "10px 16px",
+      borderRadius: 8,
+      marginBottom: 10,
+      cursor: "pointer"
+    }}
+  >
+    🖨 พิมพ์ใบปะหน้าขนาด A4
+  </button>
+)}
                       <div style={sectionTitle}>เปลี่ยนสถานะ</div>
 
                       <div style={{ display: "grid", gap: 12 }}>
@@ -1411,7 +1707,6 @@ function SummaryBox({
     </div>
   );
 }
-
 
 const emptyBoxStyle: React.CSSProperties = {
   background: "#fff",
@@ -1664,6 +1959,56 @@ const paymentFilterActiveStyle: React.CSSProperties = {
   boxShadow: "0 8px 18px rgba(238,77,45,0.20)",
 };
 
+const senderSelectCardStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 12,
+  flexWrap: "wrap",
+  alignItems: "center",
+  border: "1px solid #fed7aa",
+  borderRadius: 18,
+  padding: 14,
+  background: "#fff7ed",
+  marginBottom: 16,
+};
+
+const senderSelectTitleStyle: React.CSSProperties = {
+  fontWeight: 900,
+  color: "#0f172a",
+};
+
+const senderSelectSubStyle: React.CSSProperties = {
+  marginTop: 3,
+  color: "#9a3412",
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const senderSelectStyle: React.CSSProperties = {
+  minWidth: 260,
+  flex: "1 1 260px",
+  height: 42,
+  border: "1px solid #fdba74",
+  background: "#fff",
+  color: "#0f172a",
+  borderRadius: 12,
+  padding: "0 12px",
+  fontWeight: 900,
+  outline: "none",
+};
+
+const senderManageButtonStyle: React.CSSProperties = {
+  textDecoration: "none",
+  borderRadius: 12,
+  minHeight: 42,
+  padding: "0 14px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#fff",
+  background: "#111827",
+  fontWeight: 900,
+};
+
 const batchBarStyle: React.CSSProperties = {
   display: "flex",
   gap: 10,
@@ -1691,6 +2036,13 @@ const batchSoftButtonStyle: React.CSSProperties = {
   padding: "0 12px",
   fontWeight: 900,
   cursor: "pointer",
+};
+
+const batchPrintButtonStyle: React.CSSProperties = {
+  ...batchSoftButtonStyle,
+  background: "#111827",
+  color: "#fff",
+  borderColor: "#111827",
 };
 
 const batchOrangeButtonStyle: React.CSSProperties = {

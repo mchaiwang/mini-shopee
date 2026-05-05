@@ -1284,21 +1284,28 @@ showAddedToCartMessage();
               </div>
             </div>
 
-            <div
-              style={{
-                background: "#fff",
-                color: "#ee4d2d",
-                borderRadius: 999,
-                padding: isMobile ? "8px 14px" : "10px 16px",
-                fontWeight: 900,
-                fontSize: isMobile ? 13 : 15,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              🛒 {totalQty} รายการ
-            </div>
+           <div
+  onClick={() => {
+    document.getElementById("cart-section")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }}
+  style={{
+    background: "#fff",
+    color: "#ee4d2d",
+    borderRadius: 999,
+    padding: isMobile ? "8px 14px" : "10px 16px",
+    fontWeight: 900,
+    fontSize: isMobile ? 13 : 15,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    cursor: "pointer", // 👈 เพิ่มอันนี้ให้กดได้
+  }}
+>
+  🛒 {totalQty} รายการ
+</div>
           </div>
 
           <div
@@ -1584,8 +1591,9 @@ showAddedToCartMessage();
               </div>
             </section>
 
-            <aside
-              style={{
+             <aside
+                id="cart-section"
+                style={{
                 background: "#fff",
                 borderRadius: 8,
                 border: "1px solid #eee",

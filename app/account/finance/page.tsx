@@ -727,19 +727,19 @@ export default function FinancePage() {
 
                 <section className="wallet-grid">
                   <WalletCard
-                    className="wallet-gray"
-                    label="รอยืนยัน"
-                    value={formatMoney(derivedWallet.unconfirmed)}
-                    sub="ลูกค้ายังไม่ยืนยันรับของ"
-                    hint="กดดูรายละเอียด"
-                    onClick={() => setWalletDetail("unconfirmed")}
+                    className="wallet-orange"
+                    label="ยืนยันรับสินค้าแล้ว"
+                    value={formatMoney(derivedWallet.pending)}
+                    sub="ทางเราจะทำการโอนเงินเร็วที่สุด"
+                    hint="กดดูรายละเอียดจากรีวิว"
+                    onClick={() => setWalletDetail("pending")}
                   />
 
                   <WalletCard
                     className="wallet-orange"
-                    label="ยืนยันแล้ว (ถอนได้)"
+                    label="ผู้ซื้อยืนยันรับสินค้าแล้ว"
                     value={formatMoney(derivedWallet.pending)}
-                    sub="พร้อมส่งคำขอถอน"
+                    sub="จะดำเนินการโอนเงินให้เร็วที่สุด"
                     hint="กดดูรายละเอียดจากรีวิว"
                     onClick={() => setWalletDetail("pending")}
                   />
@@ -883,19 +883,10 @@ export default function FinancePage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={handleWithdraw}
-                    disabled={withdrawing || derivedWallet.pending <= 0}
-                    className="withdraw-btn"
-                  >
-                    {withdrawing
-                      ? "กำลังส่งคำขอถอน..."
-                      : `ถอนเงิน ${formatMoney(derivedWallet.pending)}`}
-                  </button>
                 </section>
 
                 <section id="withdraw-history-section" className="section-card">
-                  <h2>ประวัติการถอนเงิน</h2>
+                  <h2>ประวัติการถอนเงินอัตโนมัติ</h2>
 
                   {withdraws.length === 0 ? (
                     <div className="empty-box">ยังไม่มีประวัติการถอนเงิน</div>

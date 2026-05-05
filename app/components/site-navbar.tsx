@@ -44,6 +44,24 @@ const activeButtonStyle: React.CSSProperties = {
   transform: "translateY(-1px)",
 };
 
+const trackButtonStyle: React.CSSProperties = {
+  textDecoration: "none",
+  height: "42px",
+  padding: "0 18px",
+  borderRadius: "12px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "7px",
+  fontSize: "14px",
+  fontWeight: 900,
+  whiteSpace: "nowrap",
+  border: "2px solid #fff",
+  background: "#fff",
+  color: ORANGE,
+  boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+};
+
 const navPanelButtonStyle: React.CSSProperties = {
   ...navButtonBaseStyle,
 };
@@ -58,10 +76,14 @@ export default function SiteNavbar() {
   const [chatBadgeBlink, setChatBadgeBlink] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const trackHref = user ? "/orders" : "/guest-orders";
+
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
     return pathname === path || pathname.startsWith(`${path}/`);
   };
+
+  const isTrackActive = isActive("/orders") || isActive("/guest-orders");
 
   const getNavStyle = (active: boolean): React.CSSProperties => ({
     ...navPanelButtonStyle,
@@ -230,6 +252,33 @@ export default function SiteNavbar() {
   const isCreatorApproved = useMemo(() => {
     return user?.creatorEnabled === true || user?.creatorStatus === "approved";
   }, [user]);
+
+  const TrackOrderButton = ({ inMenu = false }: { inMenu?: boolean }) => {
+  if (inMenu) {
+    return (
+      <Link
+        href={trackHref}
+        className={`mobile-menu-item ${isTrackActive ? "active" : ""}`}
+        onClick={() => setMenuOpen(false)}
+      >
+        <span style={{ fontSize: 20 }}>📦</span>
+        <span style={{ flex: 1 }}>
+          {user ? "การซื้อของฉัน" : "ติดตามคำสั่งซื้อ / ทวงของ"}
+        </span>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={trackHref}
+      style={getNavStyle(isTrackActive)} // ✅ ใช้ระบบเดียวกับปุ่มอื่น
+    >
+      <span>📦</span>
+      <span>{user ? "การซื้อของฉัน" : "ติดตามคำสั่งซื้อ"}</span>
+    </Link>
+  );
+};
 
   const ChatLink = ({ inMenu = false }: { inMenu?: boolean }) => {
     const href = user?.role === "admin" ? "/admin/inquiries" : "/my-chats";
@@ -409,20 +458,42 @@ export default function SiteNavbar() {
               ...
             </div>
           ) : !user ? (
-            <Link
-              href="/login"
-              style={{
-                ...getNavStyle(isActive("/login")),
-                background: "#fff",
-                color: ORANGE,
-                height: 40,
-                padding: "0 14px",
-                fontSize: 13,
-                flexShrink: 0,
-              }}
-            >
-              เข้าสู่ระบบ
-            </Link>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Link
+                href="/guest-orders"
+                aria-label="ติดตามคำสั่งซื้อ"
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                  background: "#fff",
+                  color: ORANGE,
+                  border: "2px solid rgba(255,255,255,0.85)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 20,
+                  textDecoration: "none",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                }}
+              >
+                📦
+              </Link>
+
+              <Link
+                href="/login"
+                style={{
+                  ...getNavStyle(isActive("/login")),
+                  background: "#fff",
+                  color: ORANGE,
+                  height: 40,
+                  padding: "0 14px",
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+              >
+                เข้าสู่ระบบ
+              </Link>
+            </div>
           ) : (
             <div
               style={{
@@ -432,6 +503,28 @@ export default function SiteNavbar() {
                 flexShrink: 0,
               }}
             >
+              <Link
+                href="/orders"
+                aria-label="ติดตามคำสั่งซื้อ"
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                  background: isTrackActive ? "#fff7f5" : "#fff",
+                  color: ORANGE,
+                  border: isTrackActive
+                    ? `2px solid ${ORANGE}`
+                    : "2px solid rgba(255,255,255,0.85)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 20,
+                  textDecoration: "none",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                }}
+              >
+                📦
+              </Link>
+
               <Link
                 href={user.role === "admin" ? "/admin/inquiries" : "/my-chats"}
                 aria-label="ห้องแชท"
@@ -526,9 +619,21 @@ export default function SiteNavbar() {
             กำลังโหลด...
           </div>
         ) : !user ? (
-          <Link href="/login" style={getNavStyle(isActive("/login"))}>
-            เข้าสู่ระบบ / สมัครสมาชิก
-          </Link>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
+          >
+            <TrackOrderButton />
+
+            <Link href="/login" style={getNavStyle(isActive("/login"))}>
+              เข้าสู่ระบบ / สมัครสมาชิก
+            </Link>
+          </div>
         ) : (
           <div
             style={{
@@ -561,10 +666,7 @@ export default function SiteNavbar() {
               👋 {user.name}
             </div>
 
-            <Link href="/orders" style={getNavStyle(isActive("/orders"))}>
-              <span>📦</span>
-              <span>การซื้อของฉัน</span>
-            </Link>
+            <TrackOrderButton />
 
             <ChatLink />
 
@@ -685,16 +787,7 @@ export default function SiteNavbar() {
               <span>จำรัสฟาร์ม / กลับหน้าแรก</span>
             </Link>
 
-            <Link
-              href="/orders"
-              className={`mobile-menu-item ${
-                isActive("/orders") ? "active" : ""
-              }`}
-              onClick={() => setMenuOpen(false)}
-            >
-              <span style={{ fontSize: 20 }}>📦</span>
-              <span>การซื้อของฉัน</span>
-            </Link>
+            <TrackOrderButton inMenu />
 
             <ChatLink inMenu />
 

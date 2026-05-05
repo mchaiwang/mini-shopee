@@ -267,10 +267,7 @@ export default function CheckoutPage() {
     try {
       setPlacing(true);
 
-      let refReview = "";
-      try {
-        refReview = localStorage.getItem("refReview") || "";
-      } catch {}
+  
 
       const payload = {
         items: cart,
@@ -294,7 +291,6 @@ export default function CheckoutPage() {
         phone: form.phone.trim(),
         address: form.address.trim(),
         note: form.note.trim(),
-        refReview,
       };
 
       const res = await fetch("/api/orders", {
@@ -331,7 +327,12 @@ export default function CheckoutPage() {
       window.dispatchEvent(new Event("cart-updated"));
 
       alert("สั่งซื้อสำเร็จ");
-      router.push("/orders?justOrdered=1");
+
+      if (loggedIn) {
+  router.push("/orders?justOrdered=1");
+} else {
+  router.push("/guest-orders?justOrdered=1");
+}
     } catch (err) {
       console.error(err);
       alert("เกิดข้อผิดพลาดระหว่างสั่งซื้อ");

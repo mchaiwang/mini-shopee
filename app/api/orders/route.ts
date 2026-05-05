@@ -373,7 +373,12 @@ export async function POST(request: NextRequest) {
         .find((row) => row.startsWith("userId="))
         ?.split("=")[1] || "";
 
-    const userId = String(authUser?.id || userIdFromLegacyCookie || "").trim();
+   let userId = String(authUser?.id || userIdFromLegacyCookie || "").trim();
+
+// ✅ FIX สำคัญ: fallback ด้วย email
+if (!userId && body.email) {
+  userId = body.email;
+}
 
     const shippingAddress: ShippingAddress = {
       fullName: body.shippingAddress?.fullName || body.fullName || "",
@@ -391,10 +396,13 @@ export async function POST(request: NextRequest) {
       ).trim();
 
     const newOrder: Order = {
-      id: `ORD-${Date.now()}`,
-      userId,
-      ownerId: userId,
-      email: body.email || "",
+  id: `ORD-${Date.now()}`,
+
+  // 🔥 แก้ตรงนี้
+  userId: userId || body.email || "",
+  ownerId: userId || body.email || "",
+
+  email: body.email || "",
       fullName: body.fullName || "",
       phone: body.phone || "",
       address: body.address || "",
@@ -407,7 +415,7 @@ export async function POST(request: NextRequest) {
       status: "รอยืนยันคำสั่งซื้อ",
       createdAt: new Date().toISOString(),
       shippingAddress,
-      refReview: effectiveRefReview,
+      refReview: "",
       commissionTracked: false,
       commissionAmount: 0,
       commissionOwnerUserId: "",

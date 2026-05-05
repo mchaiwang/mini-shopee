@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "WD-1777963679244",
+    "creatorUserId": "user-1774102513149",
+    "amount": 39,
+    "status": "paid",
+    "createdAt": "2026-05-05T06:47:59.238Z",
+    "updatedAt": "2026-05-05T06:48:52.042Z",
+    "items": [
+      {
+        "id": "COMM-1777963648616-0",
+        "orderId": "ORD-1777963560286",
+        "reviewId": "review-1776948486287",
+        "productId": "1",
+        "saleAmount": 390,
+        "commissionRate": 0.1,
+        "commissionAmount": 39,
+        "reviewTitle": "“สรุปให้เลย วิธีดูแลแบบนี้ เห็นผลจริงหรือแค่คิดไปเอง?”",
+        "productName": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว"
+      }
+    ],
+    "paidAt": "2026-05-05T06:48:52.042Z"
+  }
+]
