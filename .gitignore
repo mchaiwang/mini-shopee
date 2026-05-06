@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Runtime database
+data/orders.json
+data/users.json
+data/reviews.json
+data/inquiries.json
+data/commissions.json
+data/profiles.json
+
+# uploads runtime
+public/uploads/reviews/
+public/uploads/slips/
+public/uploads/chat/
