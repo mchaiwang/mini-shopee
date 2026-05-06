@@ -71,7 +71,20 @@
     "emailVerified": true,
     "otpCode": "",
     "otpPurpose": "reset",
-    "otpExpiresAt": ""
+    "otpExpiresAt": "",
+    "creatorEnabled": false,
+    "creatorStatus": "rejected",
+    "creatorDisplayName": "สมหวังนะครับ",
+    "creatorPayment": {
+      "promptPay": "",
+      "bankName": "กสิกรไทย",
+      "accountName": "มีชัย หวังศุภกิจโกศล",
+      "accountNumber": "123-2-38369-7"
+    },
+    "permissions": {
+      "canSubmitReview": true,
+      "canReceiveCommission": true
+    }
   },
   {
     "id": "user-1777820389279",

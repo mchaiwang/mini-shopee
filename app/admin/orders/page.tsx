@@ -1155,7 +1155,7 @@ function escapeHtml(value: unknown) {
                       style={quickDeliveredButtonStyle}
                       title="ลูกค้ายืนยันว่าได้รับสินค้าแล้ว — ระบบจะคิดคอมมิชชั่นให้ครีเอเตอร์"
                     >
-                      ✅ ได้รับของแล้ว
+                      ✅ ได้รับสินค้าแล้ว
                     </button>
                   </div>
                 </div>
@@ -1634,7 +1634,7 @@ function escapeHtml(value: unknown) {
                           }}
                           title="ลูกค้ายืนยันว่าได้รับสินค้าแล้ว — ระบบจะคิดคอมมิชชั่นให้ครีเอเตอร์"
                         >
-                          ✅ ลูกค้าได้รับของแล้ว
+                          ✅ ลูกค้าได้รับสินค้าแล้ว
                         </button>
 
                         <button

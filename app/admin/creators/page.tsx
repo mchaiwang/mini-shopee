@@ -15,28 +15,103 @@ export default function AdminCreatorsPage() {
     load();
   }, []);
 
-  const approve = async (userId: string) => {
+  const updateStatus = async (userId: string, action: string) => {
     await fetch("/api/admin/creators", {
       method: "PATCH",
-      body: JSON.stringify({ userId, action: "approve" })
+      body: JSON.stringify({ userId, action }),
     });
+    load();
+  };
+
+  const save = async (u: any) => {
+    await fetch("/api/admin/creators", {
+      method: "PATCH",
+      body: JSON.stringify({
+        userId: u.id,
+        action: "update",
+        payload: {
+          creatorDisplayName: u.creatorDisplayName,
+          ...u.creatorPayment,
+        },
+      }),
+    });
+    alert("บันทึกแล้ว");
     load();
   };
 
   return (
     <div style={{ padding: 40 }}>
-      <h1>อนุมัติครีเอเตอร์</h1>
+      <h1>จัดการครีเอเตอร์</h1>
 
-      {users.map((u) => (
-        <div key={u.id} style={{ border: "1px solid #ddd", padding: 12, marginBottom: 10 }}>
-          <div>{u.email}</div>
-          <div>Status: {u.creatorStatus}</div>
+      {users.map((u, i) => (
+        <div key={u.id} style={{
+          border: "1px solid #ddd",
+          padding: 20,
+          marginBottom: 15,
+          borderRadius: 10
+        }}>
+          <div><b>{u.email}</b></div>
+          <div>Status: {u.creatorStatus || "-"}</div>
 
-          {u.creatorStatus === "pending" && (
-            <button onClick={() => approve(u.id)}>
-              อนุมัติ
-            </button>
-          )}
+          <hr />
+
+          <input
+            placeholder="ชื่อแสดง"
+            value={u.creatorDisplayName || ""}
+            onChange={(e) => {
+              const newUsers = [...users];
+              newUsers[i].creatorDisplayName = e.target.value;
+              setUsers(newUsers);
+            }}
+          />
+
+          <input
+            placeholder="PromptPay"
+            value={u.creatorPayment?.promptPay || ""}
+            onChange={(e) => {
+              const newUsers = [...users];
+              newUsers[i].creatorPayment.promptPay = e.target.value;
+              setUsers(newUsers);
+            }}
+          />
+
+          <input
+            placeholder="ธนาคาร"
+            value={u.creatorPayment?.bankName || ""}
+            onChange={(e) => {
+              const newUsers = [...users];
+              newUsers[i].creatorPayment.bankName = e.target.value;
+              setUsers(newUsers);
+            }}
+          />
+
+          <input
+            placeholder="ชื่อบัญชี"
+            value={u.creatorPayment?.accountName || ""}
+            onChange={(e) => {
+              const newUsers = [...users];
+              newUsers[i].creatorPayment.accountName = e.target.value;
+              setUsers(newUsers);
+            }}
+          />
+
+          <input
+            placeholder="เลขบัญชี"
+            value={u.creatorPayment?.accountNumber || ""}
+            onChange={(e) => {
+              const newUsers = [...users];
+              newUsers[i].creatorPayment.accountNumber = e.target.value;
+              setUsers(newUsers);
+            }}
+          />
+
+          <br /><br />
+
+          <button onClick={() => save(u)}>💾 บันทึก</button>
+          <button onClick={() => updateStatus(u.id, "approve")}>✅ อนุมัติ</button>
+          <button onClick={() => updateStatus(u.id, "reject")}>❌ ปฏิเสธ</button>
+          <button onClick={() => updateStatus(u.id, "disable")}>⛔ ปิด</button>
+
         </div>
       ))}
     </div>

@@ -116,14 +116,22 @@ export default function ProfilePage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("promptpay");
 
   const canApplyCreator = useMemo(() => {
-    if (!currentUser?.id) return false;
+  if (!currentUser) return false;
 
-    return orders.some(
-      (o) =>
-        o.userId === currentUser.id &&
-        (o.status === "จัดส่งแล้ว" || o.status === "สำเร็จแล้ว")
-    );
-  }, [orders, currentUser]);
+  return orders.some((o) => {
+    const isOwner =
+      o.userId === currentUser.id ||
+      o.email === currentUser.email;
+
+    const isSuccess =
+  o.status === "จัดส่งแล้ว" ||
+  o.status === "ได้รับสินค้าแล้ว" ||
+  o.status === "ได้รับของแล้ว" ||
+  o.status === "สำเร็จแล้ว";
+
+    return isOwner && isSuccess;
+  });
+}, [orders, currentUser]);
 
   const isCreatorApproved = useMemo(() => {
     return (

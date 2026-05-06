@@ -5,52 +5,66 @@ import path from "path";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const usersFile = path.join(process.cwd(), "data", "users.json");
+const filePath = path.join(process.cwd(), "data", "users.json");
 
-function readUsers() {
-  try {
-    if (!fs.existsSync(usersFile)) return [];
-    return JSON.parse(fs.readFileSync(usersFile, "utf-8"));
-  } catch {
-    return [];
-  }
+function readData() {
+  if (!fs.existsSync(filePath)) return [];
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
 
-function writeUsers(data: any) {
-  try {
-    fs.writeFileSync(usersFile, JSON.stringify(data, null, 2));
-  } catch {
-    // Vercel read-only filesystem — ignore write errors gracefully
-  }
+function writeData(data: any) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// GET = โหลด users
 export async function GET() {
-  const users = readUsers();
-  const creators = users.filter((u: any) => u.creatorEnabled);
-  return NextResponse.json({ users: creators });
+  const users = readData();
+  return NextResponse.json({ users });
 }
 
+// PATCH = แก้ไข
 export async function PATCH(req: NextRequest) {
-  const body = await req.json();
-  const { userId, action } = body;
+  try {
+    const body = await req.json();
+    const { userId, action, payload } = body;
 
-  const users = readUsers();
-  const index = users.findIndex((u: any) => u.id === userId);
+    const users = readData();
+    const index = users.findIndex((u: any) => u.id === userId);
 
-  if (index === -1) {
-    return NextResponse.json({ success: false });
+    if (index === -1) {
+      return NextResponse.json({ success: false });
+    }
+
+    if (action === "approve") {
+      users[index].creatorStatus = "approved";
+      users[index].creatorEnabled = true;
+    }
+
+    if (action === "reject") {
+      users[index].creatorStatus = "rejected";
+      users[index].creatorEnabled = false;
+    }
+
+    if (action === "disable") {
+      users[index].creatorEnabled = false;
+    }
+
+    if (action === "update") {
+      users[index].creatorDisplayName = payload.creatorDisplayName;
+
+      users[index].creatorPayment = {
+        promptPay: payload.promptPay || "",
+        bankName: payload.bankName || "",
+        accountName: payload.accountName || "",
+        accountNumber: payload.accountNumber || "",
+      };
+    }
+
+    writeData(users);
+
+    return NextResponse.json({ success: true });
+
+  } catch {
+    return NextResponse.json({ success: false }, { status: 500 });
   }
-
-  if (action === "approve") {
-    users[index].creatorStatus = "approved";
-    users[index].permissions = {
-      ...users[index].permissions,
-      canSubmitReview: true,
-      canReceiveCommission: true,
-    };
-  }
-
-  writeUsers(users);
-
-  return NextResponse.json({ success: true });
 }

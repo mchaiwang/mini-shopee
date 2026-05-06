@@ -5,25 +5,6 @@ import path from "path";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CommissionRecord = {
-  id: string;
-  reviewId?: string;
-  creatorUserId?: string;
-  commissionOwnerUserId?: string;
-  userId?: string;
-  orderId?: string;
-  productId?: number | string | null;
-  saleAmount?: number;
-  commissionRate?: number;
-  commissionAmount?: number;
-  amount?: number;
-  status?: "pending" | "requested" | "approved" | "paid" | "rejected" | "cancelled" | string;
-  createdAt?: string;
-  updatedAt?: string;
-  approvedAt?: string | null;
-  paidAt?: string | null;
-};
-
 type WithdrawCommissionItem = {
   id: string;
   orderId: string;
@@ -49,6 +30,25 @@ type WithdrawRecord = {
   items?: WithdrawCommissionItem[];
 };
 
+type CommissionRecord = {
+  id: string;
+  reviewId?: string;
+  creatorUserId?: string;
+  commissionOwnerUserId?: string;
+  userId?: string;
+  orderId?: string;
+  productId?: number | string | null;
+  saleAmount?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  amount?: number;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  approvedAt?: string | null;
+  paidAt?: string | null;
+};
+
 type AuthUser = {
   id?: string;
   role?: string;
@@ -68,9 +68,7 @@ function ensureJsonFile(filePath: string, fallback: unknown) {
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2), "utf8");
     }
-  } catch {
-    // Vercel read-only filesystem — ignore
-  }
+  } catch {}
 }
 
 function readJsonFile<T>(filePath: string, fallback: T): T {
@@ -87,9 +85,7 @@ function writeJsonFile(filePath: string, data: unknown) {
   try {
     ensureJsonFile(filePath, []);
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-  } catch {
-    // Vercel read-only filesystem — ignore write errors gracefully
-  }
+  } catch {}
 }
 
 function asArray(raw: any, key?: string) {
@@ -100,8 +96,12 @@ function asArray(raw: any, key?: string) {
 
 function getUserFromCookie(cookieHeader: string): AuthUser | null {
   try {
-    const authCookie = cookieHeader.split("; ").find((row) => row.startsWith("auth="));
+    const authCookie = cookieHeader
+      .split("; ")
+      .find((row) => row.startsWith("auth="));
+
     if (!authCookie) return null;
+
     const encoded = authCookie.split("=")[1] || "";
     return JSON.parse(decodeURIComponent(encoded));
   } catch {
@@ -109,263 +109,189 @@ function getUserFromCookie(cookieHeader: string): AuthUser | null {
   }
 }
 
-function getCommissionOwnerId(c: any) {
-  return String(c.creatorUserId || c.commissionOwnerUserId || c.userId || "").trim();
-}
-
-function getCommissionAmount(c: any) {
-  return Number(c.commissionAmount ?? c.amount ?? 0);
-}
-
-function isRealCommission(commission: any): boolean {
-  const reviewId = String(commission.reviewId || "").trim();
-  const creatorUserId = String(
-    commission.creatorUserId || commission.userId || ""
-  ).trim();
-  const productId = String(commission.productId || "").trim();
-
-  const saleAmount = Number(commission.saleAmount || 0);
-  const amount = Number(
-    commission.commissionAmount ?? commission.amount ?? 0
-  );
-
-  if (!reviewId) return false;
-  if (!creatorUserId) return false;
-  if (!productId) return false;
-  if (saleAmount <= 0) return false;
-  if (amount <= 0) return false;
-
-  return true;
-}
-
-function cleanupOrphanCommissions(): any[] {
-  const commissionsRaw = readJsonFile<any>(commissionsFile, []);
-  const ordersRaw = readJsonFile<any>(ordersFile, []);
-  const usersRaw = readJsonFile<any>(usersFile, []);
-  const reviewsRaw = readJsonFile<any>(reviewsFile, []);
-  const productsRaw = readJsonFile<any>(productsFile, []);
-
-  const allCommissions = asArray(commissionsRaw, "commissions");
-  const orders = asArray(ordersRaw, "orders");
-  const users = asArray(usersRaw, "users");
-  const reviews = asArray(reviewsRaw, "reviews");
-  const products = asArray(productsRaw, "products");
-
-  const orderIds = new Set(orders.map((o: any) => String(o.id)));
-  const reviewIds = new Set(reviews.map((r: any) => String(r.id)));
-  const userIds = new Set(users.map((u: any) => String(u.id)));
-  const productIds = new Set(products.map((p: any) => String(p.id)));
-
-  const cleaned = allCommissions.filter((c: any) => {
-    if (!isRealCommission(c)) return false;
-
-    const orderId = String(c.orderId || "");
-    const reviewId = String(c.reviewId || "");
-    const creatorUserId = String(c.creatorUserId || c.userId || "");
-    const productId = String(c.productId || "");
-
-    if (!orderIds.has(orderId)) return false;
-    if (!reviewIds.has(reviewId)) return false;
-    if (!userIds.has(creatorUserId)) return false;
-    if (!productIds.has(productId)) return false;
-
-    return true;
-  });
-
-  if (cleaned.length !== allCommissions.length) {
-    writeJsonFile(
-      commissionsFile,
-      Array.isArray(commissionsRaw)
-        ? cleaned
-        : { ...commissionsRaw, commissions: cleaned }
-    );
-  }
-
-  return cleaned;
-}
-
 function normalizeStatus(status?: string) {
   return String(status || "pending").trim() || "pending";
 }
 
-function buildRowsForCreator(userId: string) {
-  const commissionsRaw = readJsonFile<any>(commissionsFile, []);
+function getCommissionOwnerId(c: any) {
+  return String(
+    c.creatorUserId || c.commissionOwnerUserId || c.userId || ""
+  ).trim();
+}
+
+function getCommissionAmount(c: any) {
+  const direct = Number(c.commissionAmount ?? c.amount ?? 0);
+  if (direct > 0) return direct;
+
+  const saleAmount = Number(c.saleAmount || 0);
+  const rate = Number(c.commissionRate || 0.1);
+
+  return Number((saleAmount * rate).toFixed(2));
+}
+
+function isDeliveredStatus(status?: string) {
+  const s = String(status || "").trim();
+  return s === "ได้รับสินค้าแล้ว" || s === "สำเร็จแล้ว";
+}
+
+function getOrderStatusBasedCommissionStatus(order: any) {
+  const orderStatus = String(order?.status || "").trim();
+
+  if (!isDeliveredStatus(orderStatus)) {
+    return "unconfirmed";
+  }
+
+  return normalizeStatus(order?.commissionStatus || "pending");
+}
+
+function buildRowsForCreator(userId: string): CommissionRecord[] {
   const ordersRaw = readJsonFile<any>(ordersFile, []);
+  const commissionsRaw = readJsonFile<any>(commissionsFile, []);
   const reviewsRaw = readJsonFile<any>(reviewsFile, []);
   const productsRaw = readJsonFile<any>(productsFile, []);
-  const usersRaw = readJsonFile<any>(usersFile, []);
 
-  const commissionsAll = asArray(commissionsRaw, "commissions");
   const orders = asArray(ordersRaw, "orders");
+  const commissions = asArray(commissionsRaw, "commissions");
   const reviews = asArray(reviewsRaw, "reviews");
   const products = asArray(productsRaw, "products");
-  const users = asArray(usersRaw, "users");
 
-  const orderIds = new Set(orders.map((o: any) => String(o.id)));
-  const reviewIds = new Set(reviews.map((r: any) => String(r.id)));
-  const userIds = new Set(users.map((u: any) => String(u.id)));
-  const productIds = new Set(products.map((p: any) => String(p.id)));
+  const rows: CommissionRecord[] = [];
+  const usedKeys = new Set<string>();
 
-  const commissions = commissionsAll
-    .filter(isRealCommission)
-    .filter((c: any) => {
-      const orderId = String(c.orderId || "");
-      const reviewId = String(c.reviewId || "");
-      const creatorUserId = String(c.creatorUserId || c.userId || "");
-      const productId = String(c.productId || "");
-      return (
-        orderIds.has(orderId) &&
-        reviewIds.has(reviewId) &&
-        userIds.has(creatorUserId) &&
-        productIds.has(productId)
-      );
-    });
+  for (const order of orders) {
+    const orderId = String(order?.id || "").trim();
+    if (!orderId) continue;
 
-  const rowsFromCommissions = commissions
-    .map((commission: any) => {
-      const orderId = String(commission.orderId || "");
-      const reviewId = String(commission.reviewId || "");
-      const productId = String(commission.productId || "");
-      const order = orders.find((o: any) => String(o.id) === orderId);
+    const items = Array.isArray(order?.items) ? order.items : [];
+
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+
+      const reviewId = String(item?.refReview || order?.refReview || "").trim();
+      if (!reviewId) continue;
+
+      const productId = String(item?.id || item?.productId || "").trim();
+      if (!productId) continue;
+
       const review = reviews.find((r: any) => String(r.id) === reviewId);
-      const ownerId = String(
-        getCommissionOwnerId(commission) ||
+      if (!review) continue;
+
+      const product = products.find((p: any) => String(p.id) === productId);
+
+      const creatorUserId = String(
+        item?.creatorUserId ||
           review?.commissionOwnerUserId ||
           review?.userId ||
           order?.commissionOwnerUserId ||
           ""
-      );
+      ).trim();
 
-      const matchedItem = (order?.items || []).find((item: any) => {
+      if (String(creatorUserId) !== String(userId)) continue;
+
+      const matchedCommission = commissions.find((c: any) => {
         return (
-          String(item.id || item.productId || "") === productId ||
-          String(item.refReview || "") === reviewId
+          String(c.orderId || "") === orderId &&
+          String(c.reviewId || "") === reviewId &&
+          String(c.productId || "") === productId &&
+          String(getCommissionOwnerId(c) || creatorUserId) === String(userId)
         );
       });
 
-      const product = products.find((p: any) => String(p.id) === productId);
+      const qty = Number(item.qty || item.quantity || 1);
       const saleAmount = Number(
-        commission.saleAmount ??
-          (matchedItem
-            ? Number(matchedItem.price || 0) * Number(matchedItem.qty || matchedItem.quantity || 1)
-            : order?.total || 0)
+        matchedCommission?.saleAmount ??
+          Number(item.price || 0) * qty
       );
+
       const commissionRate = Number(
-        commission.commissionRate ?? review?.commissionRate ?? product?.commissionRate ?? 0.1
+        matchedCommission?.commissionRate ??
+          item.commissionRate ??
+          review?.commissionRate ??
+          product?.commissionRate ??
+          0.1
       );
-      const explicitCommissionAmount = Number(commission.commissionAmount || commission.amount || 0);
-      const calculatedCommissionAmount = Number((saleAmount * commissionRate).toFixed(2));
-      const commissionAmount =
-        explicitCommissionAmount > 0
-          ? explicitCommissionAmount
-          : calculatedCommissionAmount;
 
-      const orderStatus = String(order?.status || "").trim();
-      const isDelivered =
-        orderStatus === "ได้รับสินค้าแล้ว" || orderStatus === "สำเร็จแล้ว";
+      const commissionAmount = Number(
+        (
+          Number(
+            matchedCommission?.commissionAmount ??
+              matchedCommission?.amount ??
+              item.commissionAmount ??
+              0
+          ) || saleAmount * commissionRate
+        ).toFixed(2)
+      );
 
-      const finalStatus = isDelivered
-        ? normalizeStatus(commission.status || order?.commissionStatus)
-        : "unconfirmed";
+      if (saleAmount <= 0 || commissionAmount <= 0) continue;
 
-      return {
-        id: String(commission.id || `${orderId}-${reviewId}-${productId}`),
-        reviewId,
-        creatorUserId: ownerId,
+      const status = getOrderStatusBasedCommissionStatus(order);
+      const key = `${orderId}|${reviewId}|${productId}`;
+      usedKeys.add(key);
+
+      rows.push({
+        id:
+          matchedCommission?.id ||
+          `ORDER-${orderId}-${reviewId}-${productId}-${index}`,
         orderId,
+        reviewId,
+        creatorUserId,
         productId,
         saleAmount,
         commissionRate,
         commissionAmount,
         amount: commissionAmount,
-        status: finalStatus,
-        createdAt: commission.createdAt || order?.createdAt || "",
-        updatedAt: commission.updatedAt || order?.commissionUpdatedAt || "",
-        approvedAt: commission.approvedAt || order?.commissionApprovedAt || null,
-        paidAt: commission.paidAt || order?.commissionPaidAt || null,
-      };
-    })
-    .filter((row: any) => String(row.creatorUserId) === String(userId));
-
-  const existingKeys = new Set(
-    rowsFromCommissions.map((row: any) => `${row.orderId}|${row.reviewId}|${row.productId}`)
-  );
-
-  const rowsFromOrderItems: CommissionRecord[] = [];
-
-  orders.forEach((order: any) => {
-    (order.items || []).forEach((item: any, index: number) => {
-      const reviewId = String(item.refReview || order.refReview || "").trim();
-      if (!reviewId) return;
-
-      const productId = String(item.id || item.productId || "");
-      const key = `${order.id}|${reviewId}|${productId}`;
-      if (existingKeys.has(key)) return;
-
-      const review = reviews.find((r: any) => String(r.id) === reviewId);
-      const product = products.find((p: any) => String(p.id) === productId);
-
-      const creatorUserId = String(
-        item.creatorUserId ||
-          review?.commissionOwnerUserId ||
-          review?.userId ||
-          order.commissionOwnerUserId ||
-          ""
-      );
-
-      if (String(creatorUserId) !== String(userId)) return;
-
-      const qty = Number(item.qty || item.quantity || 1);
-      const saleAmount = Number(item.price || 0) * qty;
-      const rate = Number(item.commissionRate || review?.commissionRate || product?.commissionRate || 0.1);
-
-      const explicitItemAmount = Number(item.commissionAmount || 0);
-      const explicitOrderAmount = Number(order.commissionAmount || 0);
-      const calculatedAmount = Number((saleAmount * rate).toFixed(2));
-
-      const amount =
-        explicitItemAmount > 0
-          ? explicitItemAmount
-          : explicitOrderAmount > 0
-            ? explicitOrderAmount
-            : calculatedAmount;
-
-      const orderStatus = String(order.status || "").trim();
-      const isDelivered =
-        orderStatus === "ได้รับสินค้าแล้ว" || orderStatus === "สำเร็จแล้ว";
-
-      const finalStatus = isDelivered
-        ? normalizeStatus(order.commissionStatus)
-        : "unconfirmed";
-
-      rowsFromOrderItems.push({
-        id: `AUTO-${order.id}-${reviewId}-${productId}-${index}`,
-        orderId: String(order.id || ""),
-        reviewId,
-        creatorUserId,
-        productId,
-        saleAmount,
-        commissionRate: rate,
-        commissionAmount: amount,
-        amount,
-        status: finalStatus,
-        createdAt: order.createdAt || "",
-        updatedAt: order.commissionUpdatedAt || "",
-        approvedAt: order.commissionApprovedAt || null,
-        paidAt: order.commissionPaidAt || null,
+        status,
+        createdAt: matchedCommission?.createdAt || order?.createdAt || "",
+        updatedAt:
+          matchedCommission?.updatedAt || order?.commissionUpdatedAt || "",
+        approvedAt:
+          matchedCommission?.approvedAt || order?.commissionApprovedAt || null,
+        paidAt: matchedCommission?.paidAt || order?.commissionPaidAt || null,
       });
-    });
-  });
+    }
+  }
 
-  return [...rowsFromCommissions, ...rowsFromOrderItems].sort(
-    (a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  for (const c of commissions) {
+    const orderId = String(c.orderId || "").trim();
+    const reviewId = String(c.reviewId || "").trim();
+    const productId = String(c.productId || "").trim();
+    const key = `${orderId}|${reviewId}|${productId}`;
+
+    if (!orderId || !reviewId || !productId) continue;
+    if (usedKeys.has(key)) continue;
+
+    const ownerId = getCommissionOwnerId(c);
+    if (String(ownerId) !== String(userId)) continue;
+
+    const order = orders.find((o: any) => String(o.id) === orderId);
+    if (!order) continue;
+
+    const status = getOrderStatusBasedCommissionStatus(order);
+    const amount = getCommissionAmount(c);
+    const saleAmount = Number(c.saleAmount || 0);
+
+    if (amount <= 0 || saleAmount <= 0) continue;
+
+    rows.push({
+      ...c,
+      creatorUserId: ownerId,
+      status,
+      amount,
+      commissionAmount: amount,
+    });
+  }
+
+  return rows.sort(
+    (a, b) =>
+      new Date(b.createdAt || 0).getTime() -
+      new Date(a.createdAt || 0).getTime()
   );
 }
 
-function sumByStatus(rows: CommissionRecord[], statuses: string[]) {
+function sumRows(rows: CommissionRecord[], statuses: string[]) {
   return rows
-    .filter((c) => statuses.includes(normalizeStatus(c.status)))
-    .reduce((sum, c) => sum + getCommissionAmount(c), 0);
+    .filter((row) => statuses.includes(normalizeStatus(row.status)))
+    .reduce((sum, row) => sum + getCommissionAmount(row), 0);
 }
 
 export async function GET(req: NextRequest) {
@@ -374,21 +300,25 @@ export async function GET(req: NextRequest) {
     const user = getUserFromCookie(cookieHeader);
 
     if (!user?.id) {
-      return NextResponse.json({ success: false, message: "unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "unauthorized" },
+        { status: 401 }
+      );
     }
 
-    cleanupOrphanCommissions();
-
     const myCommissions = buildRowsForCreator(String(user.id));
+
     const withdrawsRaw = readJsonFile<any>(withdrawsFile, []);
     const withdraws = asArray(withdrawsRaw, "withdraws");
 
-    const unconfirmed = sumByStatus(myCommissions, ["unconfirmed"]);
-    const pending = sumByStatus(myCommissions, ["pending"]);
-    const requested = sumByStatus(myCommissions, ["requested", "approved"]);
-    const paid = sumByStatus(myCommissions, ["paid"]);
+    const unconfirmed = sumRows(myCommissions, ["unconfirmed"]);
+    const pending = sumRows(myCommissions, ["pending"]);
+    const requested = sumRows(myCommissions, ["requested", "approved"]);
+    const paid = sumRows(myCommissions, ["paid"]);
 
-    const myWithdraws = withdraws.filter((w: any) => String(w.creatorUserId) === String(user.id));
+    const myWithdraws = withdraws.filter(
+      (w: any) => String(w.creatorUserId) === String(user.id)
+    );
 
     return NextResponse.json({
       success: true,
@@ -414,17 +344,26 @@ export async function POST(req: NextRequest) {
     const user = getUserFromCookie(cookieHeader);
 
     if (!user?.id) {
-      return NextResponse.json({ success: false, message: "unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "unauthorized" },
+        { status: 401 }
+      );
     }
 
     const myPending = buildRowsForCreator(String(user.id)).filter(
       (c) => normalizeStatus(c.status) === "pending"
     );
 
-    const total = myPending.reduce((sum, c) => sum + getCommissionAmount(c), 0);
+    const total = myPending.reduce(
+      (sum, c) => sum + getCommissionAmount(c),
+      0
+    );
 
     if (total <= 0) {
-      return NextResponse.json({ success: false, message: "ไม่มีเงินให้ถอน" });
+      return NextResponse.json({
+        success: false,
+        message: "ไม่มีเงินให้ถอน",
+      });
     }
 
     const now = new Date().toISOString();
@@ -435,10 +374,13 @@ export async function POST(req: NextRequest) {
     const products = asArray(productsRaw, "products");
 
     const items: WithdrawCommissionItem[] = myPending.map((c) => {
-      const review = reviews.find((r: any) => String(r.id) === String(c.reviewId));
+      const review = reviews.find(
+        (r: any) => String(r.id) === String(c.reviewId)
+      );
       const product = products.find(
         (p: any) => String(p.id) === String(c.productId)
       );
+
       return {
         id: String(c.id || ""),
         orderId: String(c.orderId || ""),
@@ -446,7 +388,7 @@ export async function POST(req: NextRequest) {
         productId: String(c.productId || ""),
         saleAmount: Number(c.saleAmount || 0),
         commissionRate: Number(c.commissionRate || 0),
-        commissionAmount: Number(c.commissionAmount ?? c.amount ?? 0),
+        commissionAmount: getCommissionAmount(c),
         reviewTitle: review?.title || "",
         productName: product?.name || "",
       };
@@ -465,14 +407,24 @@ export async function POST(req: NextRequest) {
     const withdrawsRaw = readJsonFile<any>(withdrawsFile, []);
     const withdraws = asArray(withdrawsRaw, "withdraws");
     withdraws.unshift(newWithdraw);
-    writeJsonFile(withdrawsFile, Array.isArray(withdrawsRaw) ? withdraws : { ...withdrawsRaw, withdraws });
+
+    writeJsonFile(
+      withdrawsFile,
+      Array.isArray(withdrawsRaw)
+        ? withdraws
+        : { ...withdrawsRaw, withdraws }
+    );
+
+    const pendingOrderIds = new Set(
+      myPending.map((c) => String(c.orderId || ""))
+    );
 
     const ordersRaw = readJsonFile<any>(ordersFile, []);
     const orders = asArray(ordersRaw, "orders");
-    const pendingOrderIds = new Set(myPending.map((c) => String(c.orderId || "")));
 
     const updatedOrders = orders.map((order: any) => {
       if (!pendingOrderIds.has(String(order.id || ""))) return order;
+
       return {
         ...order,
         commissionStatus: "requested",
@@ -480,18 +432,29 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    writeJsonFile(ordersFile, Array.isArray(ordersRaw) ? updatedOrders : { ...ordersRaw, orders: updatedOrders });
+    writeJsonFile(
+      ordersFile,
+      Array.isArray(ordersRaw)
+        ? updatedOrders
+        : { ...ordersRaw, orders: updatedOrders }
+    );
 
     const commissionsRaw = readJsonFile<any>(commissionsFile, []);
     const commissions = asArray(commissionsRaw, "commissions");
 
     if (commissions.length > 0) {
-      const pendingIds = new Set(myPending.map((c) => String(c.id || "")));
+      const pendingKeys = new Set(
+        myPending.map(
+          (c) => `${String(c.orderId)}|${String(c.reviewId)}|${String(c.productId)}`
+        )
+      );
 
       const updatedCommissions = commissions.map((c: any) => {
+        const key = `${String(c.orderId)}|${String(c.reviewId)}|${String(c.productId)}`;
+
         if (
-          pendingIds.has(String(c.id || "")) ||
-          (String(getCommissionOwnerId(c)) === String(user.id) && normalizeStatus(c.status) === "pending")
+          pendingKeys.has(key) &&
+          String(getCommissionOwnerId(c)) === String(user.id)
         ) {
           return {
             ...c,
@@ -507,7 +470,9 @@ export async function POST(req: NextRequest) {
 
       writeJsonFile(
         commissionsFile,
-        Array.isArray(commissionsRaw) ? updatedCommissions : { ...commissionsRaw, commissions: updatedCommissions }
+        Array.isArray(commissionsRaw)
+          ? updatedCommissions
+          : { ...commissionsRaw, commissions: updatedCommissions }
       );
     }
 

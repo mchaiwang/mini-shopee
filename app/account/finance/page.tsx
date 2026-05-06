@@ -613,7 +613,7 @@ export default function FinancePage() {
   };
 
   const getWalletDetailTitle = () => {
-    if (walletDetail === "unconfirmed") return "คอมมิชชั่นที่รอลูกค้ายืนยันรับของ";
+    if (walletDetail === "unconfirmed") return "คอมมิชชั่นซื้อจากรีวิว";
     if (walletDetail === "pending") return "คอมมิชชั่นที่ลูกค้าได้รับของแล้ว";
     if (walletDetail === "approved") return "รายละเอียดยอดรอรับโอน";
     if (walletDetail === "paid") return "รายละเอียดยอดโอนแล้ว";
@@ -622,7 +622,7 @@ export default function FinancePage() {
 
   const getWalletDetailDescription = () => {
     if (walletDetail === "unconfirmed") {
-      return "ยอดนี้คือคอมมิชชั่นจากออเดอร์ที่ยังอยู่ในขั้นตอนการจัดส่ง เมื่อลูกค้ายืนยันว่าได้รับสินค้าแล้ว ยอดจะย้ายไปยืนยันแล้ว";
+     return "ยอดนี้คือคอมมิชชั่นจากออเดอร์ที่ซื้อผ่านรีวิวของครีเอเตอร์ และยังรอจัดการเรื่องจัดส่ง";
     }
 
     if (walletDetail === "pending") {
@@ -726,13 +726,13 @@ export default function FinancePage() {
                 </section>
 
                 <section className="wallet-grid">
-                  <WalletCard
+                 <WalletCard
                     className="wallet-orange"
-                    label="ยืนยันรับสินค้าแล้ว"
-                    value={formatMoney(derivedWallet.pending)}
-                    sub="ทางเราจะทำการโอนเงินเร็วที่สุด"
+                    label="คอมมิชชั่นซื้อจากรีวิว"
+                    value={formatMoney(derivedWallet.unconfirmed)}
+                    sub="รอจัดการเรื่องจัดส่ง"
                     hint="กดดูรายละเอียดจากรีวิว"
-                    onClick={() => setWalletDetail("pending")}
+                    onClick={() => setWalletDetail("unconfirmed")}
                   />
 
                   <WalletCard
