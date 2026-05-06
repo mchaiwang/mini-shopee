@@ -120,7 +120,7 @@ function getCreatorCode(review: ReviewRecord): string {
     ? users.find((u: any) => String(u.id) === String(review.userId))
     : null;
 
-  return String(user?.creatorCode || review.creatorCode || "1124").trim();
+ return String((user as any)?.creatorCode || review.creatorCode || "1124").trim();
 }
 
 function getProductMainImage(product: ProductRecord | null) {
