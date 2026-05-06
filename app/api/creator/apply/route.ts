@@ -61,7 +61,7 @@ const hasCompletedOrder = orders.some(
     if (!hasCompletedOrder) {
       return NextResponse.json({
         success: false,
-        message: "ต้องมีออเดอร์ที่จัดส่งแล้วก่อน ถึงสมัครได้",
+        message: "ต้องมีออเดอร์ที่จัดส่งแล้ว หรือ ได้รับสินค้าแล้ว ก่อน ถึงสมัครได้",
       });
     }
 
