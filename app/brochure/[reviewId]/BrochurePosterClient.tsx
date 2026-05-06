@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { BrochureCreatorCTA } from "@/app/components/creator-promo";
 
 type TileItem = {
   image: string;
@@ -556,6 +557,17 @@ export default function BrochurePosterClient({
   <br />
 </div>
         </div>
+      </div>
+
+      {/* CTA ชวนสมัครครีเอเตอร์ — ตอนล่างสุดของหน้าใบปลิว */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 720,
+          margin: "16px auto 0",
+        }}
+      >
+        <BrochureCreatorCTA href="/profile" />
       </div>
     </div>
   );

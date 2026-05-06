@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { ReviewBecomeCreatorCTA } from "@/app/components/creator-promo";
 
 type Product = {
   id: number;
@@ -1386,6 +1387,9 @@ useEffect(() => {
             </div>
           )}
         </section>
+
+        {/* CTA ชวนเป็นครีเอเตอร์ใต้รีวิวสินค้า */}
+        <ReviewBecomeCreatorCTA href="/profile" />
 
         <section
           style={{

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CreatorFinanceTipsCard } from "@/app/components/creator-promo";
 
 type AuthUser = {
   id?: string;
@@ -771,6 +772,9 @@ export default function FinancePage() {
                     onClick={() => setWalletDetail("total")}
                   />
                 </section>
+
+                {/* Tip card สำหรับเพิ่มรายได้ */}
+                <CreatorFinanceTipsCard />
 
                 {walletDetail ? (
                   <section className="section-card detail-card">

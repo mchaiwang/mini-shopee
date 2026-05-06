@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { CreatorPromoBanner } from "@/app/components/creator-promo";
 
 type Product = {
   id: number;
@@ -1307,6 +1308,9 @@ showAddedToCartMessage();
   🛒 {totalQty} รายการ
 </div>
           </div>
+
+          {/* === Creator / Affiliate promotion banner === */}
+          <CreatorPromoBanner href="/profile" compact={isMobile} />
 
           <div
             style={{

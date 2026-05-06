@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import {
+  CreatorBenefitsCard,
+  CreatorQuickActions,
+} from "@/app/components/creator-promo";
 
 type ProfileForm = {
   name: string;
@@ -788,38 +792,49 @@ export default function ProfilePage() {
         </div>
 
         {isCreatorApproved ? (
-          <div
-            style={{
-              borderRadius: 16,
-              background: "#ecfdf5",
-              border: "1px solid #86efac",
-              color: "#166534",
-              padding: 18,
-              fontWeight: 800,
-              lineHeight: 1.8,
-            }}
-          >
-            ✅ บัญชีนี้เป็นครีเอเตอร์แล้ว
-            <br />
-            ชื่อที่แสดง: {resolvedCreatorDisplayName}
-          </div>
+          <>
+            <div
+              style={{
+                borderRadius: 16,
+                background: "#ecfdf5",
+                border: "1px solid #86efac",
+                color: "#166534",
+                padding: 18,
+                fontWeight: 800,
+                lineHeight: 1.8,
+              }}
+            >
+              ✅ บัญชีนี้เป็นครีเอเตอร์แล้ว
+              <br />
+              ชื่อที่แสดง: {resolvedCreatorDisplayName}
+            </div>
+
+            {/* Quick action buttons สำหรับ creator ที่ approved แล้ว */}
+            <CreatorQuickActions />
+          </>
         ) : !canApplyCreator ? (
-          <div
-            style={{
-              borderRadius: 16,
-              background: "#fff7ed",
-              border: "1px solid #fdba74",
-              color: "#9a3412",
-              padding: 18,
-              fontWeight: 800,
-              lineHeight: 1.7,
-            }}
-          >
-            ต้องมีอย่างน้อย 1 ออเดอร์ที่สถานะเป็น “จัดส่งแล้ว” หรือ “สำเร็จแล้ว”
-            ก่อน จึงจะสมัครเป็นครีเอเตอร์ได้
-          </div>
+          <>
+            <CreatorBenefitsCard />
+            <div
+              style={{
+                borderRadius: 16,
+                background: "#fff7ed",
+                border: "1px solid #fdba74",
+                color: "#9a3412",
+                padding: 18,
+                fontWeight: 800,
+                lineHeight: 1.7,
+              }}
+            >
+              ต้องมีอย่างน้อย 1 ออเดอร์ที่สถานะเป็น “จัดส่งแล้ว” หรือ “สำเร็จแล้ว”
+              ก่อน จึงจะสมัครเป็นครีเอเตอร์ได้
+            </div>
+          </>
         ) : (
           <div style={{ display: "grid", gap: 16 }}>
+            {/* explanation card ก่อนสมัคร */}
+            <CreatorBenefitsCard />
+
             <div
               style={{
                 color: "#475569",

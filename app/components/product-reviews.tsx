@@ -1,5 +1,7 @@
 "use client";
 
+import { ReviewBecomeCreatorCTA } from "./creator-promo";
+
 type Review = {
   id: number;
   name: string;
@@ -255,6 +257,9 @@ export default function ProductReviews({
           รีวิวในส่วนนี้เป็นรีวิวจากลูกค้าในเว็บไซต์ของร้าน และหากต้องการดูความคิดเห็นเพิ่มเติม
           สามารถกดปุ่มไปดูต่อที่ Shopee ได้
         </div>
+
+        {/* CTA ชวนเป็นครีเอเตอร์ใต้รีวิว */}
+        <ReviewBecomeCreatorCTA href="/profile" />
       </div>
     </section>
   );
