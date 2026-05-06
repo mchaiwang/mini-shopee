@@ -108,6 +108,19 @@
     "emailVerified": true,
     "otpCode": "",
     "otpPurpose": "verify",
-    "otpExpiresAt": ""
+    "otpExpiresAt": "",
+    "creatorEnabled": false,
+    "creatorStatus": "rejected",
+    "creatorDisplayName": "สัญญาใจ",
+    "creatorPayment": {
+      "promptPay": "0813214528",
+      "bankName": "",
+      "accountName": "",
+      "accountNumber": ""
+    },
+    "permissions": {
+      "canSubmitReview": true,
+      "canReceiveCommission": true
+    }
   }
 ]

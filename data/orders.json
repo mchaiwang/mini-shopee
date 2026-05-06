@@ -1,5 +1,100 @@
 [
   {
+    "id": "ORD-1778088154580",
+    "userId": "user-1777853190292",
+    "ownerId": "user-1777853190292",
+    "email": "cassava2516@gmail.com",
+    "fullName": "คนไม่มีแฟน",
+    "phone": "3214528",
+    "address": "อุดร",
+    "note": "",
+    "items": [
+      {
+        "id": 6,
+        "name": "ผงก้านพูรักษายีสต์ผิวสุนัข(ขวดเล็ก) เพื่อสุนัขตัวเล็กไม่เกิน 5 กิโลกรัม",
+        "slug": "dog-yeast-powder-small",
+        "price": 220,
+        "image": "/uploads/products/1774279942440-40G.jpg",
+        "images": [
+          "/uploads/products/1774279942440-40G.jpg",
+          "/uploads/products/1774279966911-black-crusty-skin-on-dog-v0-lm998s7xfipc1.jpg",
+          "/uploads/products/1774279991073-ear4.jpg"
+        ],
+        "shortDescription": "จัดเป็นการรักษาทางเลือกภายในวิธีหนึ่ง ทาน 1 ช้อนต่อน้ำหนักสุนัข 4 กิโลกรัม เช่น ถ้าหนัก 15 กิโลกรัมก็ทานวันละ 3 ช้อน",
+        "category": "สัตว์เลี้ยง > สุนัข > ยีสต์สุนัข",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/1LbGiODREQ",
+        "active": true,
+        "featured": false,
+        "problemType": "yeast-dog",
+        "symptomTags": [
+          "ยีสต์",
+          "คัน",
+          "ผิวแดง",
+          "ขนร่วง"
+        ],
+        "petTypes": [
+          "dog"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 94,
+        "seoTitle": "ผงก้านพูรักษายีสต์ผิวสุนัข(ขวดเล็ก) เพื่อสุนัขตัวเล็กไม่เกิน 5 กิโลกรัม",
+        "seoDescription": "ถ้าสุนัขมีขี้เรื้อนที่ผิวแต่รักษายังไงก็ไม่หาย/สุนัขเการุนแรง ขนร่วงผิวแดง ลองแชทไลน์มาปรึกษานะครับ LineID : root2552 หรือโทร 081-9911335",
+        "reviewStats": {
+          "videos": 1,
+          "views": 40,
+          "clicks": 5,
+          "orders": 1,
+          "conversionRate": 0.2
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": false,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติก",
+        "defaultReviewId": "review-sim-dog-yeast-powder-small-001",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "สุนัขเป็นโรคนี้ดูเผินๆจะคล้ายกับขี้เรื้อนแต่ความต่างก็คือ ขนบริเวณร่างจะเป็นสีแดง(ผิวอักเสบ) และพบหลายๆเคสที่เป็นขี้เรื้อนมานานแล้วก็เป็นเชื้อรายีสต์ร่วมด้วย การรักษาจึงต้องรักษาพร้อมกันทั้ง 2 โรค",
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1,
+        "refReview": "",
+        "creatorName": ""
+      }
+    ],
+    "total": 220,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "จัดส่งแล้ว",
+    "createdAt": "2026-05-06T17:22:34.580Z",
+    "shippingAddress": {
+      "fullName": "คนไม่มีแฟน",
+      "phone": "3214528",
+      "email": "cassava2516@gmail.com",
+      "address": "อุดร"
+    },
+    "refReview": "",
+    "commissionTracked": false,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "",
+    "commissionStatus": ""
+  },
+  {
     "id": "ORD-1778005390453",
     "userId": "user-1774102513149",
     "ownerId": "user-1774102513149",
@@ -146,7 +241,7 @@
     "paymentMethod": "cod",
     "slip": "",
     "slipName": "",
-    "status": "รอจัดส่ง",
+    "status": "จัดส่งแล้ว",
     "createdAt": "2026-05-05T18:23:10.453Z",
     "shippingAddress": {
       "fullName": "มีชัย หวังศุภกิจโกศล",

@@ -151,7 +151,7 @@ export default function ProfilePage() {
 
   const applyCreator = async () => {
     if (!canApplyCreator) {
-      alert("ต้องมีออเดอร์ที่จัดส่งแล้วก่อน ถึงสมัครได้");
+      alert("ต้องเคยสั่งสินค้าจริง และ ได้รับสินค้าแล้ว ก่อน ถึงสมัครได้");
       return;
     }
 
@@ -827,7 +827,7 @@ export default function ProfilePage() {
                 marginBottom: 4,
               }}
             >
-              เมื่อสมัครสำเร็จ ระบบจะเปิดสิทธิ์ให้คุณสร้างรีวิวครีเอเตอร์ได้
+              เมื่อสมัครสำเร็จ ระบบจะให้คอมมิสชั่น 10% ของยอดขายที่คลิ๊กซื้อจากรีวิว
             </div>
 
             <div

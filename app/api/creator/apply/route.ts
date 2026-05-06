@@ -47,12 +47,16 @@ export async function POST(req: NextRequest) {
         { status: 404 }
       );
     }
-
-    const hasCompletedOrder = orders.some(
-      (o: any) =>
-        o.userId === user.id &&
-        (o.status === "จัดส่งแล้ว" || o.status === "สำเร็จแล้ว")
-    );
+const hasCompletedOrder = orders.some(
+  (o: any) =>
+    o.userId === user.id &&
+    (
+      o.status === "จัดส่งแล้ว" ||
+      o.status === "ได้รับสินค้าแล้ว" ||
+      o.status === "ได้รับของแล้ว" ||
+      o.status === "สำเร็จแล้ว"
+    )
+);
 
     if (!hasCompletedOrder) {
       return NextResponse.json({
