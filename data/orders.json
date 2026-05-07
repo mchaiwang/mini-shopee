@@ -1,0 +1,542 @@
+[
+  {
+    "id": "ORD-1778088154580",
+    "userId": "user-1777853190292",
+    "ownerId": "user-1777853190292",
+    "email": "cassava2516@gmail.com",
+    "fullName": "คนไม่มีแฟน",
+    "phone": "3214528",
+    "address": "อุดร",
+    "note": "",
+    "items": [
+      {
+        "id": 6,
+        "name": "ผงก้านพูรักษายีสต์ผิวสุนัข(ขวดเล็ก) เพื่อสุนัขตัวเล็กไม่เกิน 5 กิโลกรัม",
+        "slug": "dog-yeast-powder-small",
+        "price": 220,
+        "image": "/uploads/products/1774279942440-40G.jpg",
+        "images": [
+          "/uploads/products/1774279942440-40G.jpg",
+          "/uploads/products/1774279966911-black-crusty-skin-on-dog-v0-lm998s7xfipc1.jpg",
+          "/uploads/products/1774279991073-ear4.jpg"
+        ],
+        "shortDescription": "จัดเป็นการรักษาทางเลือกภายในวิธีหนึ่ง ทาน 1 ช้อนต่อน้ำหนักสุนัข 4 กิโลกรัม เช่น ถ้าหนัก 15 กิโลกรัมก็ทานวันละ 3 ช้อน",
+        "category": "สัตว์เลี้ยง > สุนัข > ยีสต์สุนัข",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/1LbGiODREQ",
+        "active": true,
+        "featured": false,
+        "problemType": "yeast-dog",
+        "symptomTags": [
+          "ยีสต์",
+          "คัน",
+          "ผิวแดง",
+          "ขนร่วง"
+        ],
+        "petTypes": [
+          "dog"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 94,
+        "seoTitle": "ผงก้านพูรักษายีสต์ผิวสุนัข(ขวดเล็ก) เพื่อสุนัขตัวเล็กไม่เกิน 5 กิโลกรัม",
+        "seoDescription": "ถ้าสุนัขมีขี้เรื้อนที่ผิวแต่รักษายังไงก็ไม่หาย/สุนัขเการุนแรง ขนร่วงผิวแดง ลองแชทไลน์มาปรึกษานะครับ LineID : root2552 หรือโทร 081-9911335",
+        "reviewStats": {
+          "videos": 1,
+          "views": 40,
+          "clicks": 5,
+          "orders": 1,
+          "conversionRate": 0.2
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": false,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติก",
+        "defaultReviewId": "review-sim-dog-yeast-powder-small-001",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "สุนัขเป็นโรคนี้ดูเผินๆจะคล้ายกับขี้เรื้อนแต่ความต่างก็คือ ขนบริเวณร่างจะเป็นสีแดง(ผิวอักเสบ) และพบหลายๆเคสที่เป็นขี้เรื้อนมานานแล้วก็เป็นเชื้อรายีสต์ร่วมด้วย การรักษาจึงต้องรักษาพร้อมกันทั้ง 2 โรค",
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1,
+        "refReview": "",
+        "creatorName": ""
+      }
+    ],
+    "total": 220,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "จัดส่งแล้ว",
+    "createdAt": "2026-05-06T17:22:34.580Z",
+    "shippingAddress": {
+      "fullName": "คนไม่มีแฟน",
+      "phone": "3214528",
+      "email": "cassava2516@gmail.com",
+      "address": "อุดร"
+    },
+    "refReview": "",
+    "commissionTracked": false,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "",
+    "commissionStatus": ""
+  },
+  {
+    "id": "ORD-1778005390453",
+    "userId": "user-1774102513149",
+    "ownerId": "user-1774102513149",
+    "email": "mc@gmail.com",
+    "fullName": "มีชัย หวังศุภกิจโกศล",
+    "phone": "081-9911335",
+    "address": "133 หมู่ 2  หัวลำ ท่าหลวง ลพบุรี  15230",
+    "note": "",
+    "items": [
+      {
+        "id": 1,
+        "name": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+        "slug": "fip-care-andrographis",
+        "price": 390,
+        "image": "/uploads/products/1774277559617-ADV2.jpg",
+        "images": [
+          "/uploads/products/1774277559617-ADV2.jpg",
+          "/uploads/products/1774277585129-467405182.jpg",
+          "/uploads/products/1774277595376-FIP.jpg"
+        ],
+        "shortDescription": "เป็นทางเลือกในการรักษาแมว FIP/โรค FIP ไม่มีอาการเฉพาะเจาะจง แต่โดยทั่วไปแล้ว แมวที่เป็นโรค FIP ทุกรูปแบบมักแสดงอาการทั่วไป เช่น เบื่ออาหาร น้ำหนักลด ซึม และมีไข้ขึ้นๆ ลงๆ ซึ่งไม่ตอบสนองต่อยาปฏิชีวนะ",
+        "category": "สัตว์เลี้ยง > แมว > FIP",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/50UZQEu8ok?share_channel_code=6",
+        "active": true,
+        "featured": true,
+        "problemType": "fip",
+        "symptomTags": [
+          "ซึม",
+          "ไม่กินอาหาร",
+          "น้ำในท้อง",
+          "ไข้เรื้อรัง"
+        ],
+        "petTypes": [
+          "cat"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 99,
+        "seoTitle": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+        "seoDescription": "ทางเลือกในการรักษาแมว FIP",
+        "reviewStats": {
+          "videos": 2,
+          "views": 80,
+          "clicks": 10,
+          "orders": 3,
+          "conversionRate": 0.3
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": true,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติก",
+        "defaultReviewId": "review-1776503189213",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "ทาน 1 ช้อนชาปาดเรียบ ทุกๆ 12 ชั่วโมงต่อเนื่อง 10 -12 วัน",
+        "careNote": "อาการในระยะเริ่มต้น\nในระยะเริ่มต้นของการติดเชื้อ อาจพบอาการที่ไม่จำเพาะเจาะจง เช่น มีไข้ เบื่ออาหาร อาเจียน ท้องเสีย และน้ำหนักลด\n\nอาการในระยะกลาง\nอาการอาจรวมถึงเบื่ออาหาร น้ำหนักลดอย่างมาก อ่อนเพลีย บวมที่หน้าอกหรือช่องท้อง ภาวะขาดสารอาหาร โลหิตจาง ดีซ่าน และไข้ขึ้นๆ ลงๆ\n\nอาการในระยะหลัง\nอาการอาจรวมถึงเบื่ออาหาร น้ำหนักลดอย่างมาก อ่อนเพลีย ท้องอืด หายใจถี่ ขาดสารอาหาร โลหิตจาง ดีซ่าน มีไข้ขึ้นๆ ลงๆ รู้สึกไม่สบายเรื้อรัง และตาอักเสบ",
+        "qty": 1,
+        "refReview": "review-1776948486287",
+        "creatorName": "สมหวังนะครับ"
+      },
+      {
+        "id": 6,
+        "name": "ผงก้านพูรักษายีสต์ผิวสุนัข(ขวดเล็ก) เพื่อสุนัขตัวเล็กไม่เกิน 5 กิโลกรัม",
+        "slug": "dog-yeast-powder-small",
+        "price": 220,
+        "image": "/uploads/products/1774279942440-40G.jpg",
+        "images": [
+          "/uploads/products/1774279942440-40G.jpg",
+          "/uploads/products/1774279966911-black-crusty-skin-on-dog-v0-lm998s7xfipc1.jpg",
+          "/uploads/products/1774279991073-ear4.jpg"
+        ],
+        "shortDescription": "จัดเป็นการรักษาทางเลือกภายในวิธีหนึ่ง ทาน 1 ช้อนต่อน้ำหนักสุนัข 4 กิโลกรัม เช่น ถ้าหนัก 15 กิโลกรัมก็ทานวันละ 3 ช้อน",
+        "category": "สัตว์เลี้ยง > สุนัข > ยีสต์สุนัข",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/1LbGiODREQ",
+        "active": true,
+        "featured": false,
+        "problemType": "yeast-dog",
+        "symptomTags": [
+          "ยีสต์",
+          "คัน",
+          "ผิวแดง",
+          "ขนร่วง"
+        ],
+        "petTypes": [
+          "dog"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 94,
+        "seoTitle": "ผงก้านพูรักษายีสต์ผิวสุนัข(ขวดเล็ก) เพื่อสุนัขตัวเล็กไม่เกิน 5 กิโลกรัม",
+        "seoDescription": "ถ้าสุนัขมีขี้เรื้อนที่ผิวแต่รักษายังไงก็ไม่หาย/สุนัขเการุนแรง ขนร่วงผิวแดง ลองแชทไลน์มาปรึกษานะครับ LineID : root2552 หรือโทร 081-9911335",
+        "reviewStats": {
+          "videos": 1,
+          "views": 40,
+          "clicks": 5,
+          "orders": 1,
+          "conversionRate": 0.2
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": false,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติก",
+        "defaultReviewId": "review-sim-dog-yeast-powder-small-001",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "สุนัขเป็นโรคนี้ดูเผินๆจะคล้ายกับขี้เรื้อนแต่ความต่างก็คือ ขนบริเวณร่างจะเป็นสีแดง(ผิวอักเสบ) และพบหลายๆเคสที่เป็นขี้เรื้อนมานานแล้วก็เป็นเชื้อรายีสต์ร่วมด้วย การรักษาจึงต้องรักษาพร้อมกันทั้ง 2 โรค",
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1,
+        "refReview": "",
+        "creatorName": ""
+      }
+    ],
+    "total": 610,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "จัดส่งแล้ว",
+    "createdAt": "2026-05-05T18:23:10.453Z",
+    "shippingAddress": {
+      "fullName": "มีชัย หวังศุภกิจโกศล",
+      "phone": "081-9911335",
+      "email": "mc@gmail.com",
+      "address": "133 หมู่ 2  หัวลำ ท่าหลวง ลพบุรี  15230"
+    },
+    "refReview": "",
+    "commissionTracked": true,
+    "commissionAmount": 39,
+    "commissionOwnerUserId": "user-1774102513149",
+    "commissionStatus": "pending",
+    "deliveredAt": "2026-05-06T00:01:15.773Z"
+  },
+  {
+    "id": "ORD-1778003425283",
+    "userId": "user-1777550632063",
+    "ownerId": "user-1777550632063",
+    "email": "root2552@gmail.com",
+    "fullName": "จอบละโว้",
+    "phone": "0813214529",
+    "address": "ลพบุรี",
+    "note": "",
+    "items": [
+      {
+        "id": 1,
+        "name": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+        "slug": "fip-care-andrographis",
+        "price": 390,
+        "image": "/uploads/products/1774277559617-ADV2.jpg",
+        "images": [
+          "/uploads/products/1774277559617-ADV2.jpg",
+          "/uploads/products/1774277585129-467405182.jpg",
+          "/uploads/products/1774277595376-FIP.jpg"
+        ],
+        "shortDescription": "เป็นทางเลือกในการรักษาแมว FIP/โรค FIP ไม่มีอาการเฉพาะเจาะจง แต่โดยทั่วไปแล้ว แมวที่เป็นโรค FIP ทุกรูปแบบมักแสดงอาการทั่วไป เช่น เบื่ออาหาร น้ำหนักลด ซึม และมีไข้ขึ้นๆ ลงๆ ซึ่งไม่ตอบสนองต่อยาปฏิชีวนะ",
+        "category": "สัตว์เลี้ยง > แมว > FIP",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/50UZQEu8ok?share_channel_code=6",
+        "active": true,
+        "featured": true,
+        "problemType": "fip",
+        "symptomTags": [
+          "ซึม",
+          "ไม่กินอาหาร",
+          "น้ำในท้อง",
+          "ไข้เรื้อรัง"
+        ],
+        "petTypes": [
+          "cat"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 99,
+        "seoTitle": "ผงฟ้าทะลายโจร ช่วยรักษา FIP ในแมว",
+        "seoDescription": "ทางเลือกในการรักษาแมว FIP",
+        "reviewStats": {
+          "videos": 2,
+          "views": 80,
+          "clicks": 10,
+          "orders": 3,
+          "conversionRate": 0.3
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": true,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติก",
+        "defaultReviewId": "review-1776503189213",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "ทาน 1 ช้อนชาปาดเรียบ ทุกๆ 12 ชั่วโมงต่อเนื่อง 10 -12 วัน",
+        "careNote": "อาการในระยะเริ่มต้น\nในระยะเริ่มต้นของการติดเชื้อ อาจพบอาการที่ไม่จำเพาะเจาะจง เช่น มีไข้ เบื่ออาหาร อาเจียน ท้องเสีย และน้ำหนักลด\n\nอาการในระยะกลาง\nอาการอาจรวมถึงเบื่ออาหาร น้ำหนักลดอย่างมาก อ่อนเพลีย บวมที่หน้าอกหรือช่องท้อง ภาวะขาดสารอาหาร โลหิตจาง ดีซ่าน และไข้ขึ้นๆ ลงๆ\n\nอาการในระยะหลัง\nอาการอาจรวมถึงเบื่ออาหาร น้ำหนักลดอย่างมาก อ่อนเพลีย ท้องอืด หายใจถี่ ขาดสารอาหาร โลหิตจาง ดีซ่าน มีไข้ขึ้นๆ ลงๆ รู้สึกไม่สบายเรื้อรัง และตาอักเสบ",
+        "qty": 1,
+        "refReview": "review-1776948486287",
+        "creatorName": "สมหวังนะครับ"
+      }
+    ],
+    "total": 390,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "ได้รับสินค้าแล้ว",
+    "createdAt": "2026-05-05T17:50:25.283Z",
+    "shippingAddress": {
+      "fullName": "จอบละโว้",
+      "phone": "0813214529",
+      "email": "root2552@gmail.com",
+      "address": "ลพบุรี"
+    },
+    "refReview": "",
+    "commissionTracked": true,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "user-1774102513149",
+    "commissionStatus": "rejected",
+    "deliveredAt": "2026-05-05T17:52:37.018Z",
+    "commissionUpdatedAt": "2026-05-06T00:04:33.370Z"
+  },
+  {
+    "id": "ORD-1777999940993",
+    "userId": "user-1777550632063",
+    "ownerId": "user-1777550632063",
+    "email": "root2552@gmail.com",
+    "fullName": "จอบละโว้",
+    "phone": "0819911335",
+    "address": "ท่าหลวง",
+    "note": "",
+    "items": [
+      {
+        "id": 3,
+        "name": "BlackCat ผงผสมอาหารรักษาเชื้อราแมว",
+        "slug": "blackcat-fungus-powder",
+        "price": 220,
+        "image": "/uploads/products/1774278234012-lazada.jpg",
+        "images": [
+          "/uploads/products/1774278234012-lazada.jpg",
+          "/uploads/products/1774278371061-Shopee_7ba01a219acf355024760cfc7a32d512.jpg",
+          "/uploads/products/1774278381579-Shopee_6f5a1e4fd707d34eefa385def23eef72.jpg"
+        ],
+        "shortDescription": "โรยผสมอาหาร ใช้กับแมวที่เป็นโรคเชื้อรา ใช้ร่วมกับยาภายนอก สเปรย์คลิปโต เพื่อรักษาให้หายขาดตามคู่มือแนะนำ",
+        "category": "สัตว์เลี้ยง > แมว > เชื้อราแมว",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/6Kzx1NhSQD?share_channel_code=6",
+        "active": true,
+        "featured": true,
+        "problemType": "cat-fungus",
+        "symptomTags": [
+          "เชื้อรา",
+          "ขนร่วง",
+          "แผลวง"
+        ],
+        "petTypes": [
+          "cat"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 97,
+        "seoTitle": "BlackCat ผงผสมอาหารรักษาเชื้อราแมว",
+        "seoDescription": "โรยผสมอาหาร ใช้กับแมวที่เป็นโรคเชื้อรา ใช้ร่วมกับยาภายนอก สเปรย์คลิปโต เพื่อรักษาให้หายขาดตามคู่มือแนะนำ",
+        "reviewStats": {
+          "videos": 3,
+          "views": 120,
+          "clicks": 15,
+          "orders": 4,
+          "conversionRate": 0.2667
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": false,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ผงตักโรย",
+        "defaultReviewId": "review-sim-blackcat-fungus-powder-001",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "ระยะแรกจะเห็นแค่ขนร่าง /ระยะสองจะเริ่มมีแผลอักเสบเริ่มมีแผลโดยเฉพาะบริเวณใบหน้า/ระยะสามจะกระจายแผลไปทั่วร่างกาย",
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1
+      }
+    ],
+    "total": 220,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "ได้รับสินค้าแล้ว",
+    "createdAt": "2026-05-05T16:52:20.993Z",
+    "shippingAddress": {
+      "fullName": "จอบละโว้",
+      "phone": "0819911335",
+      "email": "root2552@gmail.com",
+      "address": "ท่าหลวง"
+    },
+    "refReview": "",
+    "commissionTracked": false,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "",
+    "commissionStatus": "",
+    "deliveredAt": "2026-05-05T16:56:03.447Z"
+  },
+  {
+    "id": "ORD-1777993299556",
+    "userId": "user-1774102513149",
+    "ownerId": "user-1774102513149",
+    "email": "mc@gmail.com",
+    "fullName": "มีชัย หวังศุภกิจโกศล",
+    "phone": "081-9911335",
+    "address": "133 หมู่ 2  หัวลำ ท่าหลวง ลพบุรี  15230",
+    "note": "",
+    "items": [
+      {
+        "id": 3,
+        "name": "BlackCat ผงผสมอาหารรักษาเชื้อราแมว",
+        "slug": "blackcat-fungus-powder",
+        "price": 220,
+        "image": "/uploads/products/1774278234012-lazada.jpg",
+        "images": [
+          "/uploads/products/1774278234012-lazada.jpg",
+          "/uploads/products/1774278371061-Shopee_7ba01a219acf355024760cfc7a32d512.jpg",
+          "/uploads/products/1774278381579-Shopee_6f5a1e4fd707d34eefa385def23eef72.jpg"
+        ],
+        "shortDescription": "โรยผสมอาหาร ใช้กับแมวที่เป็นโรคเชื้อรา ใช้ร่วมกับยาภายนอก สเปรย์คลิปโต เพื่อรักษาให้หายขาดตามคู่มือแนะนำ",
+        "category": "สัตว์เลี้ยง > แมว > เชื้อราแมว",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/6Kzx1NhSQD?share_channel_code=6",
+        "active": true,
+        "featured": true,
+        "problemType": "cat-fungus",
+        "symptomTags": [
+          "เชื้อรา",
+          "ขนร่วง",
+          "แผลวง"
+        ],
+        "petTypes": [
+          "cat"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 97,
+        "seoTitle": "BlackCat ผงผสมอาหารรักษาเชื้อราแมว",
+        "seoDescription": "โรยผสมอาหาร ใช้กับแมวที่เป็นโรคเชื้อรา ใช้ร่วมกับยาภายนอก สเปรย์คลิปโต เพื่อรักษาให้หายขาดตามคู่มือแนะนำ",
+        "reviewStats": {
+          "videos": 3,
+          "views": 120,
+          "clicks": 15,
+          "orders": 4,
+          "conversionRate": 0.2667
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": false,
+          "isTopSeller": false,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ผงตักโรย",
+        "defaultReviewId": "review-sim-blackcat-fungus-powder-001",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "ระยะแรกจะเห็นแค่ขนร่าง /ระยะสองจะเริ่มมีแผลอักเสบเริ่มมีแผลโดยเฉพาะบริเวณใบหน้า/ระยะสามจะกระจายแผลไปทั่วร่างกาย",
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1
+      }
+    ],
+    "total": 220,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "ได้รับสินค้าแล้ว",
+    "createdAt": "2026-05-05T15:01:39.556Z",
+    "shippingAddress": {
+      "fullName": "มีชัย หวังศุภกิจโกศล",
+      "phone": "081-9911335",
+      "email": "mc@gmail.com",
+      "address": "133 หมู่ 2  หัวลำ ท่าหลวง ลพบุรี  15230"
+    },
+    "refReview": "",
+    "commissionTracked": false,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "",
+    "commissionStatus": "",
+    "deliveredAt": "2026-05-05T15:02:05.882Z"
+  }
+]

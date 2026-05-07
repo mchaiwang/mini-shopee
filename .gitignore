@@ -41,9 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # Runtime database
-data/orders.json
-data/users.json
-data/reviews.json
+
 data/inquiries.json
 data/commissions.json
 data/profiles.json
