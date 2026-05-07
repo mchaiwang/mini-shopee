@@ -5,6 +5,7 @@ import { useIsMobile } from "@/app/hooks/useIsMobile";
 import {
   CreatorBenefitsCard,
   CreatorQuickActions,
+  CreatorPromoBanner,
 } from "@/app/components/creator-promo";
 
 type ProfileForm = {
@@ -770,7 +771,15 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Creator Promo Banner — แสดงเฉพาะ user ที่ยังไม่ได้เป็น creator */}
+      {!isCreatorApproved ? (
+        <div style={{ marginTop: 22 }}>
+          <CreatorPromoBanner href="#apply-creator-section" compact={isMobile} />
+        </div>
+      ) : null}
+
       <div
+        id="apply-creator-section"
         style={{
           background: "#fff",
           border: "1px solid #eef2f6",
@@ -778,6 +787,7 @@ export default function ProfilePage() {
           padding: 24,
           boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
           marginTop: 22,
+          scrollMarginTop: 80,
         }}
       >
         <div

@@ -108,7 +108,7 @@ export function CreatorPromoBanner({
               letterSpacing: "-0.01em",
             }}
           >
-            🐾 สมัครครีเอเตอร์ เติบโตไปกับเรา
+            สมัครครีเอเตอร์ • เติบโตไปกับเรา
           </h2>
 
           <p
@@ -119,7 +119,7 @@ export function CreatorPromoBanner({
               opacity: 0.96,
             }}
           >
-            แบ่งปันประสบการณ์ดูแลแมวจากเคสจริง สร้างรีวิว แจกใบปลิว
+            แบ่งปันประสบการณ์ดูแลจากเคสจริง สร้างรีวิว แจกใบปลิว
             และรับคอมมิชชั่น <b>10%</b> จากยอดขายผ่านรีวิวของคุณ
           </p>
 
@@ -134,7 +134,7 @@ export function CreatorPromoBanner({
               fontWeight: 700,
             }}
           >
-            <li style={liStyle}>✅ ระบบช่วยสร้างใบปลิวให้อัตโนมัติ</li>
+            <li style={liStyle}>✅ รีวิวช่วยสร้างโอกาสให้สัตว์เลี้ยงมีชีวิต</li>
             <li style={liStyle}>✅ แชร์ลง Facebook / TikTok / LINE ได้ทันที</li>
             <li style={liStyle}>✅ ไม่ต้องมีผู้ติดตามเยอะก็เริ่มได้</li>
             <li style={liStyle}>✅ ยิ่งแชร์ ยิ่งมีโอกาสสร้างรายได้</li>
@@ -623,7 +623,7 @@ export function CreatorFinanceTipsCard() {
 /* ----------------------------------------------------------- */
 export function CreatorQuickActions({
   brochureHref = "/creator/reviews/new",
-  shareHref = "/creator/reviews/new",
+  shareHref = "/creator/reviews",
   earningsHref = "/account/finance",
 }: {
   brochureHref?: string;
