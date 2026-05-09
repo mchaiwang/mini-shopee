@@ -12,7 +12,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const email = String(body.email || "").trim().toLowerCase();
+    const email = String(body.email || "")
+  .trim()
+  .replace(/\s+/g, "")
+  .toLowerCase();
     const password = String(body.password || "");
 
     if (!email || !password) {
@@ -50,13 +53,16 @@ export async function POST(req: Request) {
     }
 
     // เช็ค OTP หลังจากรหัสผ่านถูกต้องแล้วเท่านั้น
-    if (user.emailVerified === false) {
-      return NextResponse.json(
-        { error: "กรุณายืนยัน OTP ทางอีเมลก่อน" },
-        { status: 400 }
-      );
-    }
-
+ if (user.emailVerified === false) {
+  return NextResponse.json(
+    {
+      error: "บัญชีนี้สมัครแล้ว แต่ยังไม่ได้ยืนยันอีเมล กรุณากรอก OTP เพื่อยืนยันบัญชี",
+      needVerify: true,
+      email: user.email,
+    },
+    { status: 400 }
+  );
+}
     const res = NextResponse.json({ success: true });
 
     res.cookies.set(

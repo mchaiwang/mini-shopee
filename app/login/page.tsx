@@ -34,7 +34,7 @@ function LoginPageInner() {
   const subtitleMap: Record<Mode, string> = {
     login: "เข้าสู่ระบบเพื่อดำเนินการต่อ",
     register: "กรอกข้อมูลเพื่อสมัครสมาชิกใหม่",
-    verifyOtp: "กรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล",
+    verifyOtp: "บัญชีนี้สมัครแล้ว แต่ยังไม่ได้ยืนยันอีเมล กรุณากรอกรหัส OTP 6 หลัก",
     forgotPassword: "กรอกอีเมลเพื่อรับรหัส OTP สำหรับรีเซตรหัสผ่าน",
     resetPassword: "กรอก OTP และรหัสผ่านใหม่",
   };
@@ -68,9 +68,24 @@ function LoginPageInner() {
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          alert(data?.error || "เข้าสู่ระบบไม่สำเร็จ");
-          return;
-        }
+  if (data?.needVerify) {
+    alert(data?.error || "บัญชีนี้ยังไม่ได้ยืนยัน OTP");
+
+    setForm((prev) => ({
+      ...prev,
+      email: data?.email || form.email,
+      password: "",
+      otp: "",
+      newPassword: "",
+    }));
+
+    setMode("verifyOtp");
+    return;
+  }
+
+  alert(data?.error || "เข้าสู่ระบบไม่สำเร็จ");
+  return;
+}
 
         window.dispatchEvent(new Event("auth-changed"));
         // hard navigate + cache bust → ทำให้หน้าใหม่โหลดสด
