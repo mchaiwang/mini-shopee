@@ -5,25 +5,43 @@ import path from "path";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// ✅ EXTENDED: added optional fields for product / image messages.
-// All new fields are optional → backward compatible with old messages
-// stored in inquiries.json that don't have a `type` field.
+// ===== existing message type (unchanged) =====
 type InquiryMessage = {
   id: string;
   sender: "customer" | "admin";
   senderName: string;
   message: string;
   createdAt: string;
-  // ===== ADDED FIELDS =====
   type?: "text" | "product" | "image";
   productId?: number;
   productName?: string;
   productSlug?: string;
   productImage?: string;
   imageUrl?: string;
-  // ========================
 };
 
+// ===== order snapshot stored on the room (read-only at chat time) =====
+type OrderItemSnapshot = {
+  id?: string | number;
+  name?: string;
+  image?: string;
+  qty?: number;
+  price?: number;
+};
+
+type OrderSnapshot = {
+  orderId: string;
+  customerName?: string;
+  phone?: string;
+  address?: string;
+  total?: number;
+  status?: string;
+  items?: OrderItemSnapshot[];
+  createdAt?: string;
+};
+
+// ===== room type — extended with optional order/guest fields =====
+// Old fields are kept; new fields are all optional → backward compatible.
 type InquiryRoom = {
   id: string;
   productId: number;
@@ -37,6 +55,15 @@ type InquiryRoom = {
   updatedAt: string;
   expiresAt: string;
   messages: InquiryMessage[];
+
+  // ===== ADDED: order-aware / guest-aware fields =====
+  orderId?: string;            // เลขคำสั่งซื้อที่ผูกกับห้อง (ถ้ามี)
+  isGuest?: boolean;           // true = ลูกค้าไม่ได้ลงทะเบียน
+  guestToken?: string;         // token สำหรับยืนยัน guest (ถ้า isGuest)
+  guestPhone?: string;         // เบอร์ของ guest (ใช้ระบุตัวรอง)
+  customerPhone?: string;      // เบอร์ของลูกค้า (ทั้ง member และ guest)
+  channel?: "inquire" | "order_chat" | "remind"; // ทักแชทธรรมดา / จากออเดอร์ / ทวงของ
+  orderSnapshot?: OrderSnapshot; // ข้อมูลออเดอร์ ณ ตอนเปิดห้อง
 };
 
 type AuthUser = {
@@ -58,6 +85,8 @@ type Subscriber = {
   userId: string;
   role: string;
   productId?: number;
+  // ===== ADDED: subscribers identified by guestToken =====
+  guestToken?: string;
   send: (payload: unknown) => void;
 };
 
@@ -69,6 +98,7 @@ declare global {
 const DATA_DIR = path.join(process.cwd(), "data");
 const INQUIRIES_PATH = path.join(DATA_DIR, "inquiries.json");
 const PRODUCTS_PATH = path.join(DATA_DIR, "products.json");
+const ORDERS_PATH = path.join(DATA_DIR, "orders.json");
 
 function getSubscribers() {
   if (!global.__inquirySubscribers) {
@@ -160,6 +190,108 @@ function getProductById(productId: number) {
   return products.find((p) => Number(p.id) === Number(productId)) || null;
 }
 
+// ===== ADDED: helpers for orders =====
+function normalizePhone(phone: string) {
+  return String(phone || "").replace(/\D/g, "");
+}
+
+function getOrderById(orderId: string) {
+  if (!orderId) return null;
+  const orders = readJSONFile<any[]>(ORDERS_PATH, []);
+  if (!Array.isArray(orders)) return null;
+
+  const target = String(orderId).trim();
+  return (
+    orders.find((o: any) => {
+      const candidates = [o?.id, o?.orderId, o?._id]
+        .filter(Boolean)
+        .map((v: any) => String(v).trim());
+      return candidates.includes(target);
+    }) || null
+  );
+}
+
+function buildOrderSnapshot(rawOrder: any): OrderSnapshot {
+  const items: OrderItemSnapshot[] = Array.isArray(rawOrder?.items)
+    ? rawOrder.items.map((it: any) => ({
+        id: it?.id,
+        name: it?.name || it?.title || "สินค้า",
+        image: it?.image || "",
+        qty: Number(it?.qty || it?.quantity || 1),
+        price: Number(it?.price || 0),
+      }))
+    : [];
+
+  const phone =
+    rawOrder?.phone ||
+    rawOrder?.customerPhone ||
+    rawOrder?.tel ||
+    rawOrder?.shippingPhone ||
+    rawOrder?.deliveryPhone ||
+    rawOrder?.shippingAddress?.phone ||
+    "";
+
+  const customerName =
+    rawOrder?.fullName ||
+    rawOrder?.name ||
+    rawOrder?.customerName ||
+    rawOrder?.shippingAddress?.fullName ||
+    "";
+
+  const address =
+    rawOrder?.address ||
+    rawOrder?.shippingAddress?.address ||
+    rawOrder?.shippingAddressText ||
+    "";
+
+  return {
+    orderId: String(rawOrder?.id || rawOrder?.orderId || rawOrder?._id || ""),
+    customerName: String(customerName || ""),
+    phone: String(phone || ""),
+    address: String(address || ""),
+    total: Number(
+      rawOrder?.total || rawOrder?.totalPrice || rawOrder?.grandTotal || 0
+    ),
+    status: String(rawOrder?.status || ""),
+    items,
+    createdAt: String(rawOrder?.createdAt || rawOrder?.date || ""),
+  };
+}
+
+// Build a friendly first message describing the order
+function buildOrderFirstMessage(channel: string, snap: OrderSnapshot) {
+  const lines: string[] = [];
+
+  if (channel === "remind") {
+    lines.push("📦 ลูกค้ากดทวงของจากคำสั่งซื้อนี้");
+  } else {
+    lines.push("💬 ลูกค้าติดต่อสอบถามจากคำสั่งซื้อนี้");
+  }
+
+  lines.push("");
+  lines.push(`เลขคำสั่งซื้อ: #${snap.orderId || "-"}`);
+  if (snap.customerName) lines.push(`ชื่อผู้รับ: ${snap.customerName}`);
+  if (snap.phone) lines.push(`เบอร์โทร: ${snap.phone}`);
+  if (snap.status) lines.push(`สถานะล่าสุด: ${snap.status}`);
+
+  if (Array.isArray(snap.items) && snap.items.length > 0) {
+    lines.push("");
+    lines.push("รายการสินค้า:");
+    snap.items.forEach((it) => {
+      const name = it.name || "สินค้า";
+      const qty = Number(it.qty || 1);
+      lines.push(`• ${name} x ${qty}`);
+    });
+  }
+
+  if (snap.total) {
+    lines.push("");
+    lines.push(`ยอดรวม: ฿${Number(snap.total).toLocaleString("th-TH")}`);
+  }
+
+  return lines.join("\n");
+}
+
 function broadcastRoomUpdate(
   room: InquiryRoom,
   type: "room_updated" | "room_deleted" = "room_updated"
@@ -175,9 +307,15 @@ function broadcastRoomUpdate(
 
     const isAdmin = subscriber.role === "admin";
     const isOwner =
+      subscriber.userId &&
       String(subscriber.userId) === String(room.customerUserId);
+    // ===== ADDED: guest subscribers identified by guestToken =====
+    const isGuestOwner =
+      subscriber.guestToken &&
+      room.guestToken &&
+      subscriber.guestToken === room.guestToken;
 
-    if (!isAdmin && !isOwner) return;
+    if (!isAdmin && !isOwner && !isGuestOwner) return;
 
     try {
       subscriber.send({
@@ -191,11 +329,7 @@ function broadcastRoomUpdate(
   });
 }
 
-// ✅ ADDED: helper that builds a fully-typed message from the request body.
-// Centralises validation so POST and PUT behave consistently.
-// - "text"    → requires non-empty `message`
-// - "product" → requires productId; productName/Slug/Image enriched from products.json if missing
-// - "image"   → requires imageUrl (data URL or path)
+// helper that builds a typed message from request body (unchanged behavior)
 function buildMessageFromBody(
   body: any,
   sender: "customer" | "admin",
@@ -226,7 +360,7 @@ function buildMessageFromBody(
     const imageUrl = String(body?.imageUrl || "").trim();
     if (!imageUrl) return { error: "ไม่พบรูปภาพ" };
     baseMsg.imageUrl = imageUrl;
-    baseMsg.message = String(body?.message || "").trim(); // optional caption
+    baseMsg.message = String(body?.message || "").trim();
     return baseMsg;
   }
 
@@ -234,11 +368,11 @@ function buildMessageFromBody(
   const productId = Number(body?.productId);
   if (!productId) return { error: "ไม่พบสินค้าที่จะส่ง" };
 
-  // Pull canonical info from products.json, but allow client to override
   const productInfo = getProductById(productId);
   baseMsg.productId = productId;
-  baseMsg.productName =
-    String(body?.productName || productInfo?.name || `สินค้า ${productId}`);
+  baseMsg.productName = String(
+    body?.productName || productInfo?.name || `สินค้า ${productId}`
+  );
   baseMsg.productSlug = String(body?.productSlug || productInfo?.slug || "");
   baseMsg.productImage = String(
     body?.productImage || (productInfo as any)?.image || "/no-image.png"
@@ -247,51 +381,113 @@ function buildMessageFromBody(
   return baseMsg;
 }
 
+// ===== ADDED: extract guestToken from request (header / query / body fallback) =====
+function getGuestTokenFromRequest(request: NextRequest, body?: any): string {
+  const headerToken = request.headers.get("x-guest-token") || "";
+  const queryToken = request.nextUrl.searchParams.get("guestToken") || "";
+  const bodyToken = body?.guestToken ? String(body.guestToken) : "";
+  return String(headerToken || queryToken || bodyToken || "").trim();
+}
+
+// ===== ADDED: visibility rule for a room when authed user / guest token / admin asks =====
+function canSeeRoom(
+  room: InquiryRoom,
+  me: { id: string; role: string } | null,
+  guestToken: string
+) {
+  if (me?.role === "admin") return true;
+  if (me && String(room.customerUserId) === String(me.id)) return true;
+  if (
+    guestToken &&
+    room.guestToken &&
+    room.isGuest &&
+    String(room.guestToken) === String(guestToken)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const me = getAuthUser(request);
+    const guestToken = getGuestTokenFromRequest(request);
 
-    if (!me) {
+    let rooms = loadRooms();
+
+    const productIdParam = request.nextUrl.searchParams.get("productId");
+    const orderIdParam = request.nextUrl.searchParams.get("orderId");
+    const adminMode = request.nextUrl.searchParams.get("admin") === "1";
+    const allMode = request.nextUrl.searchParams.get("all") === "1";
+    const roomId = request.nextUrl.searchParams.get("id");
+
+    // Guest path: must have guestToken to read anything
+    if (!me && !guestToken) {
       return NextResponse.json(
         { error: "กรุณาเข้าสู่ระบบ" },
         { status: 401 }
       );
     }
 
-    let rooms = loadRooms();
+    // Filter rooms by visibility
+    rooms = rooms.filter((room) =>
+      canSeeRoom(
+        room,
+        me ? { id: me.id, role: me.role } : null,
+        guestToken
+      )
+    );
 
-    const productIdParam = request.nextUrl.searchParams.get("productId");
-    const adminMode = request.nextUrl.searchParams.get("admin") === "1";
-    const allMode = request.nextUrl.searchParams.get("all") === "1";
-    const roomId = request.nextUrl.searchParams.get("id");
-
-    if (me.role !== "admin") {
-      rooms = rooms.filter(
-        (room) => String(room.customerUserId) === String(me.id)
-      );
-    }
-
+    // Specific room by id
     if (roomId) {
       const room = rooms.find((item) => item.id === roomId) || null;
       return NextResponse.json({ room });
     }
 
-    if (adminMode && me.role === "admin") {
+    // ===== Admin views =====
+    if (adminMode) {
+      if (!me || me.role !== "admin") {
+        return NextResponse.json({ error: "ไม่มีสิทธิ์" }, { status: 403 });
+      }
+
+      // admin gets the FULL list (canSeeRoom passes everything for admin)
+      let adminRooms = loadRooms();
+
       if (productIdParam) {
         const productId = Number(productIdParam);
-        rooms = rooms.filter(
+        adminRooms = adminRooms.filter(
           (room) => Number(room.productId) === Number(productId)
         );
       }
+      if (orderIdParam) {
+        adminRooms = adminRooms.filter(
+          (room) => String(room.orderId || "") === String(orderIdParam)
+        );
+      }
 
-      rooms = [...rooms].sort(
+      adminRooms = [...adminRooms].sort(
         (a, b) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
 
-      return NextResponse.json({ rooms });
+      return NextResponse.json({ rooms: adminRooms });
     }
 
+    // ===== Lookup by orderId (used by /order-chat) =====
+    if (orderIdParam) {
+      const room =
+        [...rooms]
+          .filter((room) => String(room.orderId || "") === String(orderIdParam))
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime()
+          )[0] || null;
+
+      return NextResponse.json({ room });
+    }
+
+    // ===== List mode for /my-chats =====
     if (allMode) {
       if (productIdParam) {
         const productId = Number(productIdParam);
@@ -308,12 +504,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ rooms });
     }
 
+    // ===== Lookup by productId (used by /chat/product/[id]) =====
     if (productIdParam) {
       const productId = Number(productIdParam);
 
       const room =
         [...rooms]
-          .filter((room) => Number(room.productId) === Number(productId))
+          .filter(
+            (room) =>
+              Number(room.productId) === Number(productId) &&
+              !room.orderId // ห้องสำหรับสินค้า ไม่ใช่ห้องของออเดอร์
+          )
           .sort(
             (a, b) =>
               new Date(b.updatedAt).getTime() -
@@ -330,7 +531,8 @@ export async function GET(request: NextRequest) {
 
     const room = rooms[0] || null;
     return NextResponse.json({ room });
-  } catch {
+  } catch (error) {
+    console.error("GET /api/inquiries error:", error);
     return NextResponse.json(
       { error: "โหลดข้อมูลแชทไม่สำเร็จ" },
       { status: 500 }
@@ -338,13 +540,24 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ✅ MODIFIED: POST now accepts text / product / image messages.
-// Old callers that send only { productId, message } continue to work unchanged
-// because buildMessageFromBody defaults type to "text".
+// ===== POST =====
+// Modes:
+// (A) Existing product-inquiry mode: { productId, message?, type?, ... }  (auth required)
+// (B) NEW order-chat mode: { orderId, source: "order_chat" | "remind",
+//        guestToken?, guestName?, guestPhone? }
+//     - if logged in → use auth user
+//     - if not       → use/create guestToken; identify order by orderId+phone match
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
     const me = getAuthUser(request);
 
+    // ----- branch (B): order-chat / remind -----
+    if (body?.orderId) {
+      return await handleOrderChatPost(request, body, me);
+    }
+
+    // ----- branch (A): legacy product inquiry — UNCHANGED behavior -----
     if (!me) {
       return NextResponse.json(
         { error: "กรุณาเข้าสู่ระบบ" },
@@ -352,7 +565,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
     const productId = Number(body.productId);
 
     if (!productId) {
@@ -365,10 +577,7 @@ export async function POST(request: NextRequest) {
     const product = getProductById(productId);
 
     if (!product) {
-      return NextResponse.json(
-        { error: "ไม่พบสินค้า" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "ไม่พบสินค้า" }, { status: 404 });
     }
 
     const rooms = loadRooms();
@@ -377,7 +586,8 @@ export async function POST(request: NextRequest) {
     let room = rooms.find(
       (item) =>
         Number(item.productId) === productId &&
-        String(item.customerUserId) === String(me.id)
+        String(item.customerUserId) === String(me.id) &&
+        !item.orderId
     );
 
     if (!room) {
@@ -396,12 +606,13 @@ export async function POST(request: NextRequest) {
           Date.now() + 30 * 24 * 60 * 60 * 1000
         ).toISOString(),
         messages: [],
+        channel: "inquire",
+        isGuest: false,
       };
 
       rooms.unshift(room);
     }
 
-    // ===== USE NEW HELPER (was: hard-coded text message) =====
     const built = buildMessageFromBody(
       body,
       me.role === "admin" ? "admin" : "customer",
@@ -414,8 +625,6 @@ export async function POST(request: NextRequest) {
     }
 
     room.messages.push(built);
-    // =========================================================
-
     room.updatedAt = now;
 
     saveRooms(rooms);
@@ -425,7 +634,8 @@ export async function POST(request: NextRequest) {
       ok: true,
       room,
     });
-  } catch {
+  } catch (error) {
+    console.error("POST /api/inquiries error:", error);
     return NextResponse.json(
       { error: "ส่งข้อความไม่สำเร็จ" },
       { status: 500 }
@@ -433,20 +643,167 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ✅ MODIFIED: PUT (admin reply) now also supports product / image messages.
-// Old payload { id, message } still works; old payload { id, status } still works.
-export async function PUT(request: NextRequest) {
-  try {
-    const me = getAuthUser(request);
+// ===== ADDED: order-chat / remind handler =====
+async function handleOrderChatPost(
+  request: NextRequest,
+  body: any,
+  me: ReturnType<typeof getAuthUser>
+) {
+  const orderId = String(body.orderId || "").trim();
+  const source: "order_chat" | "remind" =
+    body?.source === "remind" ? "remind" : "order_chat";
 
-    if (!me || me.role !== "admin") {
+  if (!orderId) {
+    return NextResponse.json(
+      { error: "ไม่พบเลขคำสั่งซื้อ" },
+      { status: 400 }
+    );
+  }
+
+  // Lookup the order to build a snapshot
+  const rawOrder = getOrderById(orderId);
+  if (!rawOrder) {
+    return NextResponse.json(
+      { error: "ไม่พบคำสั่งซื้อนี้ในระบบ" },
+      { status: 404 }
+    );
+  }
+
+  const snapshot = buildOrderSnapshot(rawOrder);
+
+  // Guest path: client supplies (or we generate) a guestToken
+  let guestToken = "";
+  let isGuest = !me;
+  if (!me) {
+    guestToken =
+      String(body?.guestToken || "").trim() ||
+      `gtok_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+  }
+
+  // For guest mode we additionally check the phone matches the order
+  if (isGuest) {
+    const claimedPhone = normalizePhone(
+      String(body?.guestPhone || snapshot.phone || "")
+    );
+    const orderPhone = normalizePhone(snapshot.phone || "");
+
+    if (!orderPhone) {
       return NextResponse.json(
-        { error: "ไม่มีสิทธิ์" },
-        { status: 403 }
+        { error: "คำสั่งซื้อนี้ไม่มีเบอร์โทรในระบบ ไม่สามารถเปิดแชทได้" },
+        { status: 400 }
       );
     }
 
+    if (!claimedPhone || claimedPhone !== orderPhone) {
+      return NextResponse.json(
+        {
+          error:
+            "ไม่สามารถยืนยันสิทธิ์ของลูกค้าได้ กรุณาเข้าหน้าตรวจสอบคำสั่งซื้อด้วยเบอร์โทรที่สั่งซื้อ",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  const rooms = loadRooms();
+  const now = nowIso();
+
+  // Find an existing room for this order
+  let room = rooms.find((r) => String(r.orderId || "") === String(orderId));
+
+  // If room exists but belongs to a different identity, prefer the existing one
+  // when identity matches; otherwise still return the existing one (no duplicates).
+  if (!room) {
+    // Build a productId hint: take the first item's id (best-effort)
+    const firstItem = Array.isArray(snapshot.items)
+      ? snapshot.items[0]
+      : null;
+    const productIdGuess = Number(firstItem?.id || 0) || 0;
+    const productInfo = productIdGuess
+      ? getProductById(productIdGuess)
+      : null;
+    const productNameGuess =
+      productInfo?.name ||
+      firstItem?.name ||
+      `คำสั่งซื้อ #${orderId}`;
+    const productSlugGuess = productInfo?.slug || "";
+    const productImageGuess =
+      (productInfo as any)?.image ||
+      firstItem?.image ||
+      "/no-image.png";
+
+    const customerUserId = me ? me.id : `guest_${guestToken}`;
+    const customerName = me
+      ? me.name
+      : String(body?.guestName || snapshot.customerName || "ลูกค้าไม่ลงทะเบียน");
+    const customerPhone = String(snapshot.phone || body?.guestPhone || "");
+
+    room = {
+      id: makeId("room"),
+      productId: productIdGuess,
+      productName: String(productNameGuess),
+      productSlug: String(productSlugGuess),
+      productImage: String(productImageGuess),
+      customerUserId,
+      customerName,
+      status: "open",
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000
+      ).toISOString(),
+      messages: [],
+
+      // order/guest fields
+      orderId,
+      isGuest,
+      guestToken: isGuest ? guestToken : undefined,
+      guestPhone: isGuest ? customerPhone : undefined,
+      customerPhone,
+      channel: source,
+      orderSnapshot: snapshot,
+    };
+
+    rooms.unshift(room);
+
+    // Auto first message describing the order
+    const firstMessage: InquiryMessage = {
+      id: makeId("msg"),
+      sender: "customer",
+      senderName: customerName,
+      message: buildOrderFirstMessage(source, snapshot),
+      createdAt: now,
+      type: "text",
+    };
+    room.messages.push(firstMessage);
+  } else {
+    // Existing room — refresh snapshot status (so admin sees the latest order
+    // status) but DO NOT duplicate the first message.
+    room.orderSnapshot = snapshot;
+    if (!room.channel) room.channel = source;
+    if (!room.customerPhone) room.customerPhone = String(snapshot.phone || "");
+    room.updatedAt = now;
+  }
+
+  saveRooms(rooms);
+  broadcastRoomUpdate(room, "room_updated");
+
+  return NextResponse.json({
+    ok: true,
+    room,
+    guestToken: isGuest ? guestToken : undefined,
+  });
+}
+
+// ===== PUT (admin replies / send messages / change status) =====
+// EXTENDED: customer (authed OR guest with token) can also send a message
+// into a room they own (only if the room has an orderId — i.e. order-chat room).
+export async function PUT(request: NextRequest) {
+  try {
     const body = await request.json();
+    const me = getAuthUser(request);
+    const guestToken = getGuestTokenFromRequest(request, body);
+
     const roomId = String(body.id || "").trim();
     const status = String(body.status || "").trim();
 
@@ -468,13 +825,23 @@ export async function PUT(request: NextRequest) {
     }
 
     const room = rooms[roomIndex];
+
+    // Permission resolution
+    const isAdmin = me?.role === "admin";
+    const isMember =
+      !!me && String(room.customerUserId) === String(me.id);
+    const isGuestOwner =
+      !!guestToken &&
+      room.isGuest &&
+      String(room.guestToken || "") === String(guestToken);
+
+    if (!isAdmin && !isMember && !isGuestOwner) {
+      return NextResponse.json({ error: "ไม่มีสิทธิ์" }, { status: 403 });
+    }
+
     const now = nowIso();
 
-    // ===== Detect "is this a message send?" =====
-    // We treat the request as a message-send if any of these are present:
-    //   - body.message (legacy text payload)
-    //   - body.type === "product" with productId
-    //   - body.type === "image" with imageUrl
+    // ===== detect message-send payload =====
     const rawType = String(body?.type || "").toLowerCase();
     const hasMessagePayload =
       Boolean(String(body?.message || "").trim()) ||
@@ -482,12 +849,20 @@ export async function PUT(request: NextRequest) {
       (rawType === "image" && Boolean(String(body?.imageUrl || "").trim()));
 
     if (hasMessagePayload) {
-      const built = buildMessageFromBody(
-        body,
-        "admin",
-        me.name || "Admin",
-        now
-      );
+      // Customer-side messaging only allowed when room is open
+      if (!isAdmin && room.status === "closed") {
+        return NextResponse.json(
+          { error: "ห้องแชทถูกปิดแล้ว" },
+          { status: 400 }
+        );
+      }
+
+      const sender: "customer" | "admin" = isAdmin ? "admin" : "customer";
+      const senderName = isAdmin
+        ? me?.name || "Admin"
+        : me?.name || room.customerName || "ลูกค้า";
+
+      const built = buildMessageFromBody(body, sender, senderName, now);
 
       if ("error" in built) {
         return NextResponse.json({ error: built.error }, { status: 400 });
@@ -496,9 +871,15 @@ export async function PUT(request: NextRequest) {
       room.messages.push(built);
       room.updatedAt = now;
     }
-    // ============================================
 
+    // status changes are admin-only
     if (status === "open" || status === "closed") {
+      if (!isAdmin) {
+        return NextResponse.json(
+          { error: "ไม่มีสิทธิ์เปลี่ยนสถานะห้อง" },
+          { status: 403 }
+        );
+      }
       room.status = status;
       room.updatedAt = now;
     }
@@ -511,7 +892,8 @@ export async function PUT(request: NextRequest) {
       ok: true,
       room,
     });
-  } catch {
+  } catch (error) {
+    console.error("PUT /api/inquiries error:", error);
     return NextResponse.json(
       { error: "อัปเดตข้อมูลไม่สำเร็จ" },
       { status: 500 }
@@ -524,19 +906,13 @@ export async function DELETE(request: NextRequest) {
     const me = getAuthUser(request);
 
     if (!me || me.role !== "admin") {
-      return NextResponse.json(
-        { error: "ไม่มีสิทธิ์" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "ไม่มีสิทธิ์" }, { status: 403 });
     }
 
     const roomId = request.nextUrl.searchParams.get("id");
 
     if (!roomId) {
-      return NextResponse.json(
-        { error: "ไม่พบ id" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "ไม่พบ id" }, { status: 400 });
     }
 
     const rooms = loadRooms();
@@ -550,7 +926,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("DELETE /api/inquiries error:", error);
     return NextResponse.json(
       { error: "ลบข้อมูลไม่สำเร็จ" },
       { status: 500 }

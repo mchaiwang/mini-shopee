@@ -15,6 +15,8 @@ type Subscriber = {
   userId: string;
   role: string;
   productId?: number;
+  // ===== ADDED: guest subscribers identified by guestToken =====
+  guestToken?: string;
   send: (payload: unknown) => void;
 };
 
@@ -55,8 +57,12 @@ function makeId(prefix: string) {
 
 export async function GET(request: NextRequest) {
   const me = getAuthUser(request);
+  // ===== ADDED: guest can also subscribe with guestToken =====
+  const guestToken = String(
+    request.nextUrl.searchParams.get("guestToken") || ""
+  ).trim();
 
-  if (!me) {
+  if (!me && !guestToken) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -84,9 +90,10 @@ export async function GET(request: NextRequest) {
 
       const subscriber: Subscriber = {
         id: subscriberId,
-        userId: me.id,
-        role: me.role,
+        userId: me?.id || "",
+        role: me?.role || (guestToken ? "guest" : "customer"),
         productId,
+        guestToken: guestToken || undefined,
         send,
       };
 

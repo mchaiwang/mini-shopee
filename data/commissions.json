@@ -1,14 +1,17 @@
 [
   {
-    "id": "COMM-1778025675778-0",
+    "id": "COMM-1778289548330-0",
     "reviewId": "review-1776948486287",
     "creatorUserId": "user-1774102513149",
-    "orderId": "ORD-1778005390453",
+    "orderId": "ORD-1778289393620",
     "productId": 1,
     "saleAmount": 390,
     "commissionRate": 0.1,
     "commissionAmount": 39,
-    "status": "pending",
-    "createdAt": "2026-05-06T00:01:15.778Z"
+    "status": "paid",
+    "createdAt": "2026-05-09T01:19:08.330Z",
+    "updatedAt": "2026-05-09T01:20:19.805Z",
+    "approvedAt": "2026-05-09T01:19:59.124Z",
+    "paidAt": "2026-05-09T01:20:19.805Z"
   }
 ]

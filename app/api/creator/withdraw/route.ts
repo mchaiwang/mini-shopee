@@ -131,7 +131,7 @@ function getCommissionAmount(c: any) {
 
 function isDeliveredStatus(status?: string) {
   const s = String(status || "").trim();
-  return s === "ได้รับสินค้าแล้ว" || s === "สำเร็จแล้ว";
+  return s === "ได้รับสินค้าแล้ว";
 }
 
 function getOrderStatusBasedCommissionStatus(order: any) {

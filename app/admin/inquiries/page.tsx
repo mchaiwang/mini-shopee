@@ -38,6 +38,29 @@ type InquiryRoom = {
   updatedAt: string;
   expiresAt: string;
   messages: ChatMessage[];
+  // ===== ADDED: order/guest fields =====
+  orderId?: string;
+  isGuest?: boolean;
+  guestToken?: string;
+  guestPhone?: string;
+  customerPhone?: string;
+  channel?: "inquire" | "order_chat" | "remind";
+  orderSnapshot?: {
+    orderId: string;
+    customerName?: string;
+    phone?: string;
+    address?: string;
+    total?: number;
+    status?: string;
+    items?: Array<{
+      id?: string | number;
+      name?: string;
+      image?: string;
+      qty?: number;
+      price?: number;
+    }>;
+    createdAt?: string;
+  };
 };
 
 type StreamPayload = {
@@ -219,14 +242,19 @@ useEffect(() => {
         }
 
         if (payload.type === "room_deleted" && payload.room) {
-          setRooms((prev) => prev.filter((room) => room.id !== payload.room!.id));
+          // ✅ FIXED: use functional update — read latest list from setter callback
+          // so we don't have to put `rooms` in the deps array (which caused
+          // SSE reconnect loop).
+          const deletedId = payload.room!.id;
+
+          setRooms((prev) => prev.filter((room) => room.id !== deletedId));
 
           setSelectedRoomId((prev) => {
-            if (prev === payload.room?.id) {
-              const remaining = rooms.filter((room) => room.id !== payload.room?.id);
-              return remaining[0]?.id || "";
-            }
-            return prev;
+            if (prev !== deletedId) return prev;
+            // We don't have a synchronous handle on the next list here, but
+            // the next render will re-derive selectedRoom from `rooms`.
+            // Pick "" to fall back; UI then auto-selects first if any.
+            return "";
           });
 
           return;
@@ -251,6 +279,14 @@ useEffect(() => {
 
           setSelectedRoomId((prev) => prev || payload.room!.id);
           scrollToBottom();
+
+          // ✅ ADDED: notify the navbar to refresh its unread badge instantly,
+          // so we don't depend on the navbar's slower polling interval.
+          try {
+            window.dispatchEvent(new Event("chat-updated"));
+          } catch {
+            /* ignore */
+          }
         }
       } catch (error) {
         console.error("SSE parse error:", error);
@@ -265,7 +301,11 @@ useEffect(() => {
       es.close();
       setLiveConnected(false);
     };
-  }, [me?.id, rooms]);
+    // ✅ FIXED: removed `rooms` from deps. Previously it caused the SSE
+    // EventSource to be torn down + recreated on EVERY incoming message
+    // (because that updated `rooms`), spamming the server.
+    // We use functional state updates above so we don't need `rooms` here.
+  }, [me?.id]);
 
   const filteredRooms = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -766,6 +806,60 @@ useEffect(() => {
                           {room.customerName}
                         </div>
 
+                        {/* ===== ADDED: member/guest + channel badges ===== */}
+                        <div
+                          style={{
+                            marginTop: 4,
+                            display: "flex",
+                            gap: 4,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: "2px 6px",
+                              borderRadius: 999,
+                              background: room.isGuest ? "#fff7ed" : "#ecfdf5",
+                              color: room.isGuest ? "#c2410c" : "#166534",
+                              border: room.isGuest
+                                ? "1px solid #fdba74"
+                                : "1px solid #86efac",
+                            }}
+                          >
+                            {room.isGuest ? "ลูกค้าไม่ลงทะเบียน" : "สมาชิก"}
+                          </span>
+
+                          {room.orderId ? (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                padding: "2px 6px",
+                                borderRadius: 999,
+                                background:
+                                  room.channel === "remind"
+                                    ? "#fff7ed"
+                                    : "#eff6ff",
+                                color:
+                                  room.channel === "remind"
+                                    ? "#c2410c"
+                                    : "#1d4ed8",
+                                border:
+                                  room.channel === "remind"
+                                    ? "1px solid #fdba74"
+                                    : "1px solid #bfdbfe",
+                              }}
+                            >
+                              {room.channel === "remind"
+                                ? "ทวงของ"
+                                : "แชทคำสั่งซื้อ"}
+                            </span>
+                          ) : null}
+                        </div>
+                        {/* ============================================= */}
+
                         <div
                           style={{
                             marginTop: 4,
@@ -777,6 +871,26 @@ useEffect(() => {
                         >
                           {room.productName}
                         </div>
+
+                        {/* ===== ADDED: order id + phone summary ===== */}
+                        {room.orderId || room.customerPhone ? (
+                          <div
+                            style={{
+                              marginTop: 4,
+                              fontSize: 12,
+                              color: "#444",
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {room.orderId ? (
+                              <div>คำสั่งซื้อ: #{room.orderId}</div>
+                            ) : null}
+                            {room.customerPhone ? (
+                              <div>โทร: {room.customerPhone}</div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {/* ============================================= */}
                       </div>
 
                       <span
@@ -964,6 +1078,137 @@ useEffect(() => {
                       <br />
                       สร้างเมื่อ: {formatDateTime(selectedRoom.createdAt)}
                     </div>
+
+                    {/* ===== ADDED: order context panel (only when room is order-bound) ===== */}
+                    {selectedRoom.orderId ? (
+                      <div
+                        style={{
+                          marginTop: 12,
+                          padding: 12,
+                          borderRadius: 12,
+                          background: "#fffaf5",
+                          border: "1px solid #ffd2c4",
+                          color: "#334155",
+                          fontSize: 13,
+                          lineHeight: 1.7,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              background: selectedRoom.isGuest
+                                ? "#fff7ed"
+                                : "#ecfdf5",
+                              color: selectedRoom.isGuest
+                                ? "#c2410c"
+                                : "#166534",
+                              border: selectedRoom.isGuest
+                                ? "1px solid #fdba74"
+                                : "1px solid #86efac",
+                            }}
+                          >
+                            {selectedRoom.isGuest
+                              ? "ลูกค้าไม่ลงทะเบียน"
+                              : "สมาชิก"}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              background:
+                                selectedRoom.channel === "remind"
+                                  ? "#fff7ed"
+                                  : "#eff6ff",
+                              color:
+                                selectedRoom.channel === "remind"
+                                  ? "#c2410c"
+                                  : "#1d4ed8",
+                              border:
+                                selectedRoom.channel === "remind"
+                                  ? "1px solid #fdba74"
+                                  : "1px solid #bfdbfe",
+                            }}
+                          >
+                            ช่องทาง:{" "}
+                            {selectedRoom.channel === "remind"
+                              ? "ทวงของ"
+                              : "ทักแชทจากคำสั่งซื้อ"}
+                          </span>
+                        </div>
+
+                        <div>
+                          <b>เลขคำสั่งซื้อ:</b> #{selectedRoom.orderId}
+                        </div>
+
+                        {selectedRoom.orderSnapshot?.customerName ? (
+                          <div>
+                            <b>ชื่อผู้รับ:</b>{" "}
+                            {selectedRoom.orderSnapshot.customerName}
+                          </div>
+                        ) : null}
+
+                        {(selectedRoom.customerPhone ||
+                          selectedRoom.orderSnapshot?.phone) ? (
+                          <div>
+                            <b>เบอร์โทร:</b>{" "}
+                            {selectedRoom.customerPhone ||
+                              selectedRoom.orderSnapshot?.phone}
+                          </div>
+                        ) : null}
+
+                        {selectedRoom.orderSnapshot?.status ? (
+                          <div>
+                            <b>สถานะคำสั่งซื้อ:</b>{" "}
+                            {selectedRoom.orderSnapshot.status}
+                          </div>
+                        ) : null}
+
+                        {selectedRoom.orderSnapshot?.total ? (
+                          <div>
+                            <b>ยอดรวม:</b> ฿
+                            {Number(
+                              selectedRoom.orderSnapshot.total
+                            ).toLocaleString("th-TH")}
+                          </div>
+                        ) : null}
+
+                        {Array.isArray(selectedRoom.orderSnapshot?.items) &&
+                        selectedRoom.orderSnapshot!.items!.length > 0 ? (
+                          <div style={{ marginTop: 6 }}>
+                            <b>รายการสินค้า:</b>
+                            <ul
+                              style={{
+                                margin: "4px 0 0",
+                                paddingLeft: 18,
+                              }}
+                            >
+                              {selectedRoom.orderSnapshot!.items!.map(
+                                (it, idx) => (
+                                  <li key={idx}>
+                                    {it.name || "สินค้า"} x{" "}
+                                    {Number(it.qty || 1)}
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {/* ====================================================== */}
                   </div>
 
                   <div

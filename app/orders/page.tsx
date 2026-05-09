@@ -60,6 +60,23 @@ type CurrentUser = {
   };
 };
 
+function openOrderChat(opts: {
+  orderId: string;
+  source: "order_chat" | "remind";
+}) {
+  const { orderId, source } = opts;
+  if (!orderId) return;
+
+  const ok = window.confirm("เปิดแชทเพื่อติดตามคำสั่งซื้อนี้ใช่ไหม?");
+  if (!ok) return;
+
+  const params = new URLSearchParams();
+  params.set("orderId", orderId);
+  params.set("source", source);
+
+  window.location.href = `/order-chat?${params.toString()}`;
+}
+
 function OrdersPageInner() {
   const searchParams = useSearchParams();
   const isMobile = useIsMobile(640);
@@ -124,19 +141,47 @@ function OrdersPageInner() {
       const filtered = list.filter((order) => {
         if (!me) return false;
 
-        const orderUserId = String(order.userId || order.ownerId || "");
-        const meId = String(me.id || "");
+       const orderUserId = String(
+  order.userId ||
+  order.ownerId ||
+  ""
+)
+  .trim()
+  .toLowerCase();
 
-        const orderEmail = String(
-          order.email || order.shippingAddress?.email || ""
-        )
-          .trim()
-          .toLowerCase();
+const meId = String(
+  me.id ||
+  ""
+)
+  .trim()
+  .toLowerCase();
 
-        const meEmail = String(me.email || "").trim().toLowerCase();
+const orderEmail = String(
+  order.email ||
+  order.shippingAddress?.email ||
+  ""
+)
+  .trim()
+  .toLowerCase();
 
-        if (meId && orderUserId && orderUserId === meId) return true;
-        if (meEmail && orderEmail && orderEmail === meEmail) return true;
+const meEmail = String(
+  me.email ||
+  ""
+)
+  .trim()
+  .toLowerCase();
+
+const matchedById =
+  meId &&
+  orderUserId &&
+  orderUserId === meId;
+
+const matchedByEmail =
+  meEmail &&
+  orderEmail &&
+  orderEmail === meEmail;
+
+return matchedById || matchedByEmail;
 
         return false;
       });
@@ -194,8 +239,7 @@ function OrdersPageInner() {
   function getStatusColor(status?: string) {
     if (status === "อนุมัติ" || status === "อนุมัติแล้ว") return "#16a34a";
     if (status === "ได้รับสินค้าแล้ว" || status === "สำเร็จแล้ว") return "#16a34a";
-    if (status === "รอจัดส่ง" || status === "รอยืนยันคำสั่งซื้อ")
-      return "#f97316";
+    if (status === "รอจัดส่ง" || status === "รอยืนยันคำสั่งซื้อ") return "#f97316";
     if (status === "จัดส่งแล้ว") return "#2563eb";
     return "#374151";
   }
@@ -203,15 +247,13 @@ function OrdersPageInner() {
   function getStatusBg(status?: string) {
     if (status === "อนุมัติ" || status === "อนุมัติแล้ว") return "#f0fdf4";
     if (status === "ได้รับสินค้าแล้ว" || status === "สำเร็จแล้ว") return "#dcfce7";
-    if (status === "รอจัดส่ง" || status === "รอยืนยันคำสั่งซื้อ")
-      return "#fff7ed";
+    if (status === "รอจัดส่ง" || status === "รอยืนยันคำสั่งซื้อ") return "#fff7ed";
     if (status === "จัดส่งแล้ว") return "#eff6ff";
     return "#f3f4f6";
   }
 
   function canReview(order: Order) {
-    // ลูกค้ารีวิวได้ทั้งหลังจัดส่งและรับของ
-    return order.status === "จัดส่งแล้ว" || order.status === "ได้รับสินค้าแล้ว" || order.status === "สำเร็จแล้ว";
+    return order.status === "ได้รับสินค้าแล้ว" || order.status === "สำเร็จแล้ว";
   }
 
   function isCreatorUser(user: CurrentUser | null) {
@@ -223,13 +265,6 @@ function OrdersPageInner() {
       user.permissions?.canSubmitReview === true ||
       user.permissions?.canReceiveCommission === true
     );
-  }
-
-  function getReviewHref(order: Order) {
-    if (isCreatorUser(currentUser)) {
-      return `/creator/reviews/new?orderId=${order.id}`;
-    }
-    return `/reviews/new?orderId=${order.id}`;
   }
 
   function getItemName(item: OrderItem) {
@@ -267,7 +302,6 @@ function OrdersPageInner() {
 
     return product?.image || "";
   }
-
 
   function openReviewModal(order: Order) {
     setReviewOrder(order);
@@ -314,6 +348,7 @@ function OrdersPageInner() {
         name: getItemName(item),
         image: getItemImage(item),
       }));
+
     if (validItems.length === 0) {
       alert("ไม่พบรายการสินค้าที่จะรีวิว");
       return;
@@ -434,9 +469,7 @@ function OrdersPageInner() {
                 </div>
                 <div style={{ color: "#6b7280", marginTop: 4, fontSize: isMobile ? 12 : 14 }}>
                   วันที่สั่งซื้อ:{" "}
-                  {order.createdAt
-                    ? new Date(order.createdAt).toLocaleString("th-TH")
-                    : "-"}
+                  {order.createdAt ? new Date(order.createdAt).toLocaleString("th-TH") : "-"}
                 </div>
               </div>
 
@@ -473,13 +506,7 @@ function OrdersPageInner() {
                   background: "#fcfcfd",
                 }}
               >
-                <div
-                  style={{
-                    fontWeight: 900,
-                    fontSize: 22,
-                    marginBottom: 12,
-                  }}
-                >
+                <div style={{ fontWeight: 900, fontSize: 22, marginBottom: 12 }}>
                   ข้อมูลการจัดส่ง
                 </div>
 
@@ -493,12 +520,10 @@ function OrdersPageInner() {
                   <strong>ที่อยู่:</strong> {getAddress(order)}
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <strong>หมายเหตุ:</strong>{" "}
-                  {order.note || order.shippingAddress?.note || "-"}
+                  <strong>หมายเหตุ:</strong> {order.note || order.shippingAddress?.note || "-"}
                 </div>
                 <div>
-                  <strong>การชำระเงิน:</strong>{" "}
-                  {paymentLabel(order.paymentMethod)}
+                  <strong>การชำระเงิน:</strong> {paymentLabel(order.paymentMethod)}
                 </div>
               </div>
 
@@ -510,13 +535,7 @@ function OrdersPageInner() {
                   background: "#fcfcfd",
                 }}
               >
-                <div
-                  style={{
-                    fontWeight: 900,
-                    fontSize: 22,
-                    marginBottom: 12,
-                  }}
-                >
+                <div style={{ fontWeight: 900, fontSize: 22, marginBottom: 12 }}>
                   หลักฐานการชำระเงิน
                 </div>
 
@@ -569,13 +588,7 @@ function OrdersPageInner() {
                 background: "#fcfcfd",
               }}
             >
-              <div
-                style={{
-                  fontWeight: 900,
-                  fontSize: 22,
-                  marginBottom: 12,
-                }}
-              >
+              <div style={{ fontWeight: 900, fontSize: 22, marginBottom: 12 }}>
                 รายการสินค้า
               </div>
 
@@ -693,6 +706,51 @@ function OrdersPageInner() {
               )}
             </div>
 
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: "1px solid #f1f5f9",
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{
+                  color: "#64748b",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  marginRight: "auto",
+                }}
+              >
+                มีคำถามเกี่ยวกับคำสั่งซื้อนี้?
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openOrderChat({ orderId: order.id, source: "remind" })}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: 44,
+                  padding: "0 18px",
+                  borderRadius: 10,
+                  background: "linear-gradient(135deg,#ee4d2d,#ff7337)",
+                  color: "#fff",
+                  fontWeight: 900,
+                  fontSize: 14,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 8px 18px rgba(238,77,45,0.22)",
+                }}
+              >
+                💬 ทักแชท / ตามของ
+              </button>
+            </div>
+
             {canReview(order) && (
               <div
                 style={{
@@ -717,58 +775,56 @@ function OrdersPageInner() {
                   ได้รับสินค้าแล้ว? ช่วยให้คะแนนร้านและสินค้า
                 </div>
 
-                <a
-                  href={getReviewHref(order)}
-                  onClick={(event) => {
-                    if (!isCreatorUser(currentUser)) {
-                      event.preventDefault();
-                      openReviewModal(order);
-                    }
+                <button
+                  type="button"
+                  onClick={() => openReviewModal(order)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 44,
+                    padding: "0 18px",
+                    borderRadius: 6,
+                    background: "#fff",
+                    color: "#ee4d2d",
+                    fontWeight: 900,
+                    fontSize: 14,
+                    textDecoration: "none",
+                    border: "1px solid #ee4d2d",
+                    boxShadow: "0 6px 14px rgba(15,23,42,0.06)",
+                    cursor: "pointer",
                   }}
-                  style={
-                    isCreatorUser(currentUser)
-                      ? {
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          minHeight: 44,
-                          padding: "0 18px",
-                          borderRadius: 6,
-                          background: "#ee4d2d",
-                          color: "#fff",
-                          fontWeight: 900,
-                          fontSize: 14,
-                          textDecoration: "none",
-                          border: "1px solid #ee4d2d",
-                          boxShadow: "0 8px 18px rgba(238,77,45,0.18)",
-                        }
-                      : {
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          minHeight: 44,
-                          padding: "0 18px",
-                          borderRadius: 6,
-                          background: "#fff",
-                          color: "#ee4d2d",
-                          fontWeight: 900,
-                          fontSize: 14,
-                          textDecoration: "none",
-                          border: "1px solid #ee4d2d",
-                          boxShadow: "0 6px 14px rgba(15,23,42,0.06)",
-                        }
-                  }
                 >
-                  {isCreatorUser(currentUser)
-                    ? "รีวิวสินค้าและรับคอมมิชชั่น"
-                    : "รีวิวและให้คะแนน"}
-                </a>
+                  รีวิวและให้คะแนน
+                </button>
+
+                {isCreatorUser(currentUser) && (
+                  <a
+                    href={`/creator/reviews/new?orderId=${order.id}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: 44,
+                      padding: "0 18px",
+                      borderRadius: 6,
+                      background: "#ee4d2d",
+                      color: "#fff",
+                      fontWeight: 900,
+                      fontSize: 14,
+                      textDecoration: "none",
+                      border: "1px solid #ee4d2d",
+                      boxShadow: "0 8px 18px rgba(238,77,45,0.18)",
+                    }}
+                  >
+                    สร้างใบปลิวขายสินค้า
+                  </a>
+                )}
               </div>
             )}
           </div>
         ))
       )}
-    
 
       {reviewOrder ? (
         <div style={reviewModalBackdropStyle} onClick={closeReviewModal}>
@@ -785,7 +841,9 @@ function OrdersPageInner() {
               </button>
             </div>
 
-            <div style={coinBarStyle}>🪙 เขียนรีวิวพร้อมรูปภาพ ช่วยเพิ่มความน่าเชื่อถือให้สินค้า</div>
+            <div style={coinBarStyle}>
+              🪙 เขียนรีวิวพร้อมรูปภาพ ช่วยเพิ่มความน่าเชื่อถือให้สินค้า
+            </div>
 
             <div style={reviewProductListStyle}>
               {(reviewOrder.items || []).map((item, index) => (
@@ -817,17 +875,21 @@ function OrdersPageInner() {
                   </button>
                 ))}
               </div>
-              <span style={ratingTextStyle}>{reviewRating >= 5 ? "ยอดเยี่ยม" : reviewRating >= 4 ? "ดีมาก" : reviewRating >= 3 ? "พอใช้" : "ควรปรับปรุง"}</span>
+              <span style={ratingTextStyle}>
+                {reviewRating >= 5
+                  ? "ยอดเยี่ยม"
+                  : reviewRating >= 4
+                  ? "ดีมาก"
+                  : reviewRating >= 3
+                  ? "พอใช้"
+                  : "ควรปรับปรุง"}
+              </span>
             </div>
 
             <div style={quickScoreGridStyle}>
               <label style={quickScoreLabelStyle}>
                 การใช้งาน
-                <select
-                  value={reviewUsage}
-                  onChange={(e) => setReviewUsage(e.target.value)}
-                  style={quickScoreSelectStyle}
-                >
+                <select value={reviewUsage} onChange={(e) => setReviewUsage(e.target.value)} style={quickScoreSelectStyle}>
                   <option value="ยอดเยี่ยม">ยอดเยี่ยม</option>
                   <option value="ดีมาก">ดีมาก</option>
                   <option value="ดี">ดี</option>
@@ -838,11 +900,7 @@ function OrdersPageInner() {
 
               <label style={quickScoreLabelStyle}>
                 คุณภาพ
-                <select
-                  value={reviewQuality}
-                  onChange={(e) => setReviewQuality(e.target.value)}
-                  style={quickScoreSelectStyle}
-                >
+                <select value={reviewQuality} onChange={(e) => setReviewQuality(e.target.value)} style={quickScoreSelectStyle}>
                   <option value="ดีเยี่ยม">ดีเยี่ยม</option>
                   <option value="ดีมาก">ดีมาก</option>
                   <option value="ดี">ดี</option>
@@ -853,11 +911,7 @@ function OrdersPageInner() {
 
               <label style={quickScoreLabelStyle}>
                 การจัดส่ง
-                <select
-                  value={reviewShipping}
-                  onChange={(e) => setReviewShipping(e.target.value)}
-                  style={quickScoreSelectStyle}
-                >
+                <select value={reviewShipping} onChange={(e) => setReviewShipping(e.target.value)} style={quickScoreSelectStyle}>
                   <option value="ดีมาก">ดีมาก</option>
                   <option value="รวดเร็ว">รวดเร็ว</option>
                   <option value="ตรงเวลา">ตรงเวลา</option>
@@ -910,10 +964,10 @@ function OrdersPageInner() {
           </div>
         </div>
       ) : null}
-
     </div>
   );
 }
+
 export default function OrdersPage() {
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>Loading...</div>}>

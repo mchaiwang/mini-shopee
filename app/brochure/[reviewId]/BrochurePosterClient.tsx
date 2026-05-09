@@ -107,7 +107,7 @@ export default function BrochurePosterClient({
 
   const handleBuyFromReview = () => {
     if (!productInfo?.id || !productInfo?.name) {
-      alert("ไม่พบข้อมูลสินค้าที่เชื่อมกับรีวิวนี้");
+      alert("ไม่พบข้อมูลสินค้าที่เชื่อมกับใบปลิวนี้");
       return;
     }
 
@@ -119,7 +119,7 @@ export default function BrochurePosterClient({
         extractRefReviewFromLink(productInfo.reviewLink);
 
       if (!refReview) {
-        alert("ไม่พบรหัสรีวิวสำหรับผูกคอมมิชชั่น");
+        alert("ไม่พบรหัสใบปลิวสำหรับผูกคอมมิชชั่น");
         return;
       }
 
@@ -223,18 +223,18 @@ export default function BrochurePosterClient({
 
         <button
           onClick={() => setShowProductPage((v) => !v)}
-          style={{
-            background: "#111827",
-            color: "#fff",
-            border: "none",
-            padding: "12px 18px",
-            borderRadius: 999,
-            fontWeight: 900,
-            cursor: "pointer",
-            boxShadow: "0 8px 18px rgba(17,24,39,0.18)",
-          }}
+style={{
+  background: "linear-gradient(135deg,#f97316,#ea580c)",
+  color: "#fff",
+  border: "none",
+  padding: "12px 18px",
+  borderRadius: 999,
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 8px 18px rgba(249,115,22,0.28)",
+}}
         >
-          {showProductPage ? "↩ กลับหน้ารีวิว" : "📘 ข้อมูลสินค้าที่ใช้ในรีวิว"}
+          {showProductPage ? "↩ กลับหน้าใบปลิว" : "📘 ข้อมูลสินค้าที่ใช้ในใบปลิว"}
         </button>
       </div>
 
@@ -442,7 +442,7 @@ export default function BrochurePosterClient({
                 color: "#111827",
               }}
             >
-              {productInfo?.name || "สินค้าที่ใช้ในรีวิว"}
+              {productInfo?.name || "สินค้าที่ใช้ในใบปลิวนี้"}
             </h2>
 
             <div
@@ -517,7 +517,7 @@ export default function BrochurePosterClient({
                   : "0 10px 20px rgba(238,77,45,0.18)",
               }}
             >
-              {addingToCart ? "กำลังหยิบลงตะกร้า..." : "🛒 ซื้อจากรีวิวนี้"}
+              {addingToCart ? "กำลังหยิบลงตะกร้า..." : "🛒 ซื้อจากใบปลิวนี้"}
             </button>
           </div>
         )}

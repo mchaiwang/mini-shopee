@@ -15,55 +15,44 @@ type CurrentUser = {
 };
 
 const ORANGE = "#ee4d2d";
+const ORANGE_DARK = "#d9381e";
+const ORANGE_LIGHT = "#fff7f5";
 
 const navButtonBaseStyle: React.CSSProperties = {
   textDecoration: "none",
-  height: "42px",
+  height: "38px",
   padding: "0 16px",
   borderRadius: "10px",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   gap: "7px",
-  fontSize: "14px",
+  fontSize: "13px",
   fontWeight: 900,
   whiteSpace: "nowrap",
   transition: "all 0.18s ease",
-  border: `1px solid ${ORANGE}`,
+  border: "1px solid rgba(255,255,255,0.65)",
   background: ORANGE,
   color: "#fff",
-  boxShadow: "0 4px 10px rgba(238,77,45,0.18)",
+  cursor: "pointer",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 10px rgba(120,35,15,0.22)",
 };
 
 const activeButtonStyle: React.CSSProperties = {
   background: "#fff",
   color: ORANGE,
-  border: `2px solid ${ORANGE}`,
+  border: "1px solid #fff",
   boxShadow:
-    "0 0 0 3px rgba(238,77,45,0.18), 0 8px 18px rgba(238,77,45,0.18)",
+    "0 0 0 2px rgba(255,255,255,0.28), 0 6px 14px rgba(120,35,15,0.24)",
   transform: "translateY(-1px)",
 };
 
-const trackButtonStyle: React.CSSProperties = {
-  textDecoration: "none",
-  height: "42px",
-  padding: "0 18px",
-  borderRadius: "12px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "7px",
-  fontSize: "14px",
-  fontWeight: 900,
-  whiteSpace: "nowrap",
-  border: "2px solid #fff",
-  background: "#fff",
-  color: ORANGE,
-  boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
-};
-
-const navPanelButtonStyle: React.CSSProperties = {
+const logoutButtonStyle: React.CSSProperties = {
   ...navButtonBaseStyle,
+  background: ORANGE_DARK,
+  color: "#fff",
+  border: "1px solid rgba(255,255,255,0.8)",
 };
 
 export default function SiteNavbar() {
@@ -73,7 +62,7 @@ export default function SiteNavbar() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const [chatBadgeBlink, setChatBadgeBlink] = useState(true);
+  const [chatBadgeBlink, setChatBadgeBlink] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const trackHref = user ? "/orders" : "/guest-orders";
@@ -86,7 +75,7 @@ export default function SiteNavbar() {
   const isTrackActive = isActive("/orders") || isActive("/guest-orders");
 
   const getNavStyle = (active: boolean): React.CSSProperties => ({
-    ...navPanelButtonStyle,
+    ...navButtonBaseStyle,
     ...(active ? activeButtonStyle : {}),
   });
 
@@ -179,14 +168,22 @@ export default function SiteNavbar() {
     loadUser();
 
     const onAuthChanged = () => loadUser();
-    const onFocus = () => loadUser();
+
+    let lastUserCheck = Date.now();
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastUserCheck < 60_000) return;
+      lastUserCheck = now;
+      loadUser();
+    };
 
     window.addEventListener("auth-changed", onAuthChanged);
-    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       window.removeEventListener("auth-changed", onAuthChanged);
-      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -196,32 +193,53 @@ export default function SiteNavbar() {
       return;
     }
 
-    loadChatUnreadCount(user);
+    let stopped = false;
+    let timer: number | null = null;
+    const POLL_INTERVAL = 30_000;
 
-    const timer = window.setInterval(() => {
-      loadChatUnreadCount(user);
-    }, 5000);
+    const tick = () => {
+      if (stopped) return;
+      if (document.visibilityState === "visible") {
+        loadChatUnreadCount(user);
+      }
+    };
+
+    tick();
+    timer = window.setInterval(tick, POLL_INTERVAL);
 
     const onChatRead = () => loadChatUnreadCount(user);
-    const onFocus = () => loadChatUnreadCount(user);
+    const onChatUpdated = () => loadChatUnreadCount(user);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadChatUnreadCount(user);
+      }
+    };
 
     window.addEventListener("chat-read", onChatRead);
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("chat-updated", onChatUpdated);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      window.clearInterval(timer);
+      stopped = true;
+      if (timer != null) window.clearInterval(timer);
       window.removeEventListener("chat-read", onChatRead);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("chat-updated", onChatUpdated);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [user?.id, user?.role]);
 
   useEffect(() => {
+    if (chatUnreadCount <= 0) {
+      setChatBadgeBlink(false);
+      return;
+    }
+
     const timer = window.setInterval(() => {
       setChatBadgeBlink((prev) => !prev);
-    }, 650);
+    }, 900);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [chatUnreadCount]);
 
   useEffect(() => {
     if (!isMobile) setMenuOpen(false);
@@ -239,6 +257,8 @@ export default function SiteNavbar() {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
+        cache: "no-store",
+        credentials: "include",
       });
     } catch {}
 
@@ -246,7 +266,9 @@ export default function SiteNavbar() {
     localStorage.removeItem("adminLoggedIn");
 
     window.dispatchEvent(new Event("auth-changed"));
-    window.location.href = "/login";
+    // hard navigate + cache bust → กัน LINE/Chrome มือถือเอา HTML เก่ามาแสดง
+    // ทำให้หน้าใหม่โหลดสด ไม่ค้างอยู่กับ user เก่า
+    window.location.href = `/login?v=${Date.now()}`;
   };
 
   const isCreatorApproved = useMemo(() => {
@@ -254,31 +276,28 @@ export default function SiteNavbar() {
   }, [user]);
 
   const TrackOrderButton = ({ inMenu = false }: { inMenu?: boolean }) => {
-  if (inMenu) {
+    if (inMenu) {
+      return (
+        <Link
+          href={trackHref}
+          className={`mobile-menu-item ${isTrackActive ? "active" : ""}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <span style={{ fontSize: 20 }}>📦</span>
+          <span style={{ flex: 1 }}>
+            {user ? "การซื้อของฉัน" : "ติดตามคำสั่งซื้อ / ทวงของ"}
+          </span>
+        </Link>
+      );
+    }
+
     return (
-      <Link
-        href={trackHref}
-        className={`mobile-menu-item ${isTrackActive ? "active" : ""}`}
-        onClick={() => setMenuOpen(false)}
-      >
-        <span style={{ fontSize: 20 }}>📦</span>
-        <span style={{ flex: 1 }}>
-          {user ? "การซื้อของฉัน" : "ติดตามคำสั่งซื้อ / ทวงของ"}
-        </span>
+      <Link href={trackHref} style={getNavStyle(isTrackActive)}>
+        <span>📦</span>
+        <span>{user ? "การซื้อของฉัน" : "ติดตามคำสั่งซื้อ"}</span>
       </Link>
     );
-  }
-
-  return (
-    <Link
-      href={trackHref}
-      style={getNavStyle(isTrackActive)} // ✅ ใช้ระบบเดียวกับปุ่มอื่น
-    >
-      <span>📦</span>
-      <span>{user ? "การซื้อของฉัน" : "ติดตามคำสั่งซื้อ"}</span>
-    </Link>
-  );
-};
+  };
 
   const ChatLink = ({ inMenu = false }: { inMenu?: boolean }) => {
     const href = user?.role === "admin" ? "/admin/inquiries" : "/my-chats";
@@ -350,8 +369,8 @@ export default function SiteNavbar() {
     <header
       style={{
         width: "100%",
-        background: "linear-gradient(135deg, #ee4d2d 0%, #f25a3a 100%)",
-        boxShadow: "0 8px 20px rgba(238,77,45,0.18)",
+        background: "linear-gradient(180deg, #f04424 0%, #ee4d2d 100%)",
+        boxShadow: "0 4px 14px rgba(120,35,15,0.18)",
         position: "sticky",
         top: 0,
         zIndex: 50,
@@ -361,11 +380,11 @@ export default function SiteNavbar() {
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
-          padding: isMobile ? "10px 14px" : "12px 20px",
+          padding: isMobile ? "10px 12px" : "10px 18px",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: isMobile ? "10px" : "14px",
+          justifyContent: isMobile ? "space-between" : "center",
+          gap: "10px",
           flexWrap: isMobile ? "nowrap" : "wrap",
         }}
       >
@@ -376,39 +395,34 @@ export default function SiteNavbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
+            gap: "9px",
             textDecoration: "none",
             color: "#fff",
             fontWeight: 900,
-            fontSize: isMobile ? "17px" : "20px",
+            fontSize: isMobile ? "16px" : "18px",
             minWidth: 0,
-            flex: isMobile ? "1 1 auto" : "none",
-            padding: "7px 10px",
-            borderRadius: "16px",
-            background: isActive("/")
-              ? "rgba(255,255,255,0.22)"
-              : "rgba(255,255,255,0.10)",
-            border: isActive("/")
-              ? "2px solid rgba(255,255,255,0.85)"
-              : "1px solid rgba(255,255,255,0.35)",
+            flex: isMobile ? "1 1 auto" : "0 0 auto",
+            padding: isMobile ? "7px 9px" : "7px 12px",
+            borderRadius: "14px",
+            background: "linear-gradient(180deg, #ff6b4a 0%, #f04424 100%)",
+            border: "2px solid rgba(255,255,255,0.9)",
             boxShadow:
-              "inset 0 1px 0 rgba(255,255,255,0.35), 0 9px 18px rgba(130,35,15,0.25), 0 2px 0 rgba(120,35,15,0.35)",
-            transform: isActive("/") ? "translateY(-1px)" : "translateY(0)",
+              "inset 0 1px 0 rgba(255,255,255,0.45), 0 6px 14px rgba(130,35,15,0.28), 0 2px 0 rgba(140,40,20,0.45)",
           }}
         >
           <div
             style={{
-              width: isMobile ? 38 : 44,
-              height: isMobile ? 38 : 44,
-              borderRadius: 12,
+              width: isMobile ? 36 : 38,
+              height: isMobile ? 36 : 38,
+              borderRadius: 10,
               background: "#fff",
               color: ORANGE,
               display: "grid",
               placeItems: "center",
-              fontSize: isMobile ? 19 : 22,
+              fontSize: isMobile ? 18 : 20,
               fontWeight: 900,
               boxShadow:
-                "inset 0 2px 0 rgba(255,255,255,0.9), 0 8px 14px rgba(0,0,0,0.16), 0 3px 0 rgba(150,45,20,0.25)",
+                "inset 0 2px 0 rgba(255,255,255,0.9), 0 4px 9px rgba(0,0,0,0.16)",
               flexShrink: 0,
             }}
           >
@@ -420,7 +434,7 @@ export default function SiteNavbar() {
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              textShadow: "0 2px 4px rgba(0,0,0,0.22)",
+              textShadow: "0 2px 3px rgba(0,0,0,0.22)",
             }}
           >
             จำรัสฟาร์ม
@@ -435,7 +449,7 @@ export default function SiteNavbar() {
                 color: ORANGE,
                 borderRadius: 999,
                 padding: "4px 8px",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
+                boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
               }}
             >
               หน้าแรก
@@ -449,9 +463,9 @@ export default function SiteNavbar() {
               style={{
                 padding: "8px 12px",
                 borderRadius: 10,
-                background: "rgba(255,255,255,0.18)",
-                color: "#fff",
-                fontWeight: 800,
+                background: "#fff",
+                color: ORANGE,
+                fontWeight: 900,
                 fontSize: 13,
               }}
             >
@@ -463,17 +477,17 @@ export default function SiteNavbar() {
                 href="/guest-orders"
                 aria-label="ติดตามคำสั่งซื้อ"
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   borderRadius: 12,
                   background: "#fff",
                   color: ORANGE,
-                  border: "2px solid rgba(255,255,255,0.85)",
+                  border: "2px solid rgba(255,255,255,0.95)",
                   display: "grid",
                   placeItems: "center",
                   fontSize: 20,
                   textDecoration: "none",
-                  boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.14)",
                 }}
               >
                 📦
@@ -483,10 +497,10 @@ export default function SiteNavbar() {
                 href="/login"
                 style={{
                   ...getNavStyle(isActive("/login")),
-                  background: "#fff",
-                  color: ORANGE,
+                  background: isActive("/login") ? "#fff" : ORANGE_DARK,
+                  color: isActive("/login") ? ORANGE : "#fff",
                   height: 40,
-                  padding: "0 14px",
+                  padding: "0 13px",
                   fontSize: 13,
                   flexShrink: 0,
                 }}
@@ -507,19 +521,17 @@ export default function SiteNavbar() {
                 href="/orders"
                 aria-label="ติดตามคำสั่งซื้อ"
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   borderRadius: 12,
-                  background: isTrackActive ? "#fff7f5" : "#fff",
-                  color: ORANGE,
-                  border: isTrackActive
-                    ? `2px solid ${ORANGE}`
-                    : "2px solid rgba(255,255,255,0.85)",
+                  background: isTrackActive ? "#fff" : ORANGE_DARK,
+                  color: isTrackActive ? ORANGE : "#fff",
+                  border: "2px solid rgba(255,255,255,0.9)",
                   display: "grid",
                   placeItems: "center",
                   fontSize: 20,
                   textDecoration: "none",
-                  boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.14)",
                 }}
               >
                 📦
@@ -530,29 +542,23 @@ export default function SiteNavbar() {
                 aria-label="ห้องแชท"
                 style={{
                   position: "relative",
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   borderRadius: 12,
                   background:
                     isActive("/my-chats") || isActive("/admin/inquiries")
                       ? "#fff"
-                      : ORANGE,
+                      : ORANGE_DARK,
                   color:
                     isActive("/my-chats") || isActive("/admin/inquiries")
                       ? ORANGE
                       : "#fff",
-                  border:
-                    isActive("/my-chats") || isActive("/admin/inquiries")
-                      ? `2px solid ${ORANGE}`
-                      : "2px solid #fff",
+                  border: "2px solid rgba(255,255,255,0.9)",
                   display: "grid",
                   placeItems: "center",
                   fontSize: 20,
                   flexShrink: 0,
-                  boxShadow:
-                    isActive("/my-chats") || isActive("/admin/inquiries")
-                      ? "0 0 0 3px rgba(255,255,255,0.5), 0 8px 16px rgba(0,0,0,0.12)"
-                      : "0 4px 10px rgba(0,0,0,0.08)",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.14)",
                 }}
               >
                 💬
@@ -586,18 +592,18 @@ export default function SiteNavbar() {
                 onClick={() => setMenuOpen(true)}
                 aria-label="เปิดเมนู"
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   borderRadius: 12,
                   background: "#fff",
                   color: ORANGE,
-                  border: "2px solid rgba(255,255,255,0.85)",
+                  border: "2px solid rgba(255,255,255,0.95)",
                   display: "grid",
                   placeItems: "center",
                   cursor: "pointer",
                   fontSize: 22,
                   flexShrink: 0,
-                  boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.14)",
                 }}
               >
                 ☰
@@ -607,13 +613,17 @@ export default function SiteNavbar() {
         ) : loading ? (
           <div
             style={{
-              minWidth: "240px",
-              padding: "12px 20px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.18)",
-              color: "#fff",
-              textAlign: "center",
-              fontWeight: 800,
+              minWidth: "220px",
+              height: 42,
+              padding: "0 18px",
+              borderRadius: 12,
+              background: "#fff",
+              color: ORANGE,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 900,
+              boxShadow: "0 6px 14px rgba(120,35,15,0.2)",
             }}
           >
             กำลังโหลด...
@@ -623,9 +633,14 @@ export default function SiteNavbar() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 10,
+              gap: 8,
               flexWrap: "wrap",
-              justifyContent: "flex-end",
+              justifyContent: "center",
+              padding: "6px",
+              borderRadius: 14,
+              background: "rgba(255,255,255,0.22)",
+              border: "1px solid rgba(255,255,255,0.45)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)",
             }}
           >
             <TrackOrderButton />
@@ -639,32 +654,25 @@ export default function SiteNavbar() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              padding: "8px 10px",
+              gap: "7px",
+              padding: "6px",
               borderRadius: "14px",
-              background: "#fff",
-              boxShadow: "0 8px 18px rgba(0,0,0,0.10)",
+              background: "rgba(255,255,255,0.24)",
+              border: "1px solid rgba(255,255,255,0.45)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.28), 0 6px 14px rgba(120,35,15,0.14)",
               flexWrap: "wrap",
-              justifyContent: "flex-end",
+              justifyContent: "center",
             }}
           >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                height: "42px",
-                padding: "0 14px",
-                borderRadius: "10px",
-                background: "rgba(238,77,45,0.08)",
-                border: "1px solid rgba(238,77,45,0.22)",
-                color: "#111827",
-                fontWeight: 900,
-                fontSize: "14px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              👋 {user.name}
-            </div>
+           <Link href="/" style={getNavStyle(isActive("/"))}>
+  <span>🌿</span>
+  <span>
+    {user?.name?.trim()
+      ? user.name
+      : user?.email?.split("@")[0] || "ผู้ใช้งาน"}
+  </span>
+</Link>
 
             <TrackOrderButton />
 
@@ -687,6 +695,9 @@ export default function SiteNavbar() {
                       ? "rgba(238,77,45,0.12)"
                       : "rgba(255,255,255,0.22)",
                     color: isActive("/account/finance") ? ORANGE : "#fff",
+                    border: isActive("/account/finance")
+                      ? "1px solid rgba(238,77,45,0.2)"
+                      : "1px solid rgba(255,255,255,0.25)",
                   }}
                 >
                   อนุมัติ
@@ -706,16 +717,7 @@ export default function SiteNavbar() {
               <span>บัญชีของฉัน</span>
             </Link>
 
-            <button
-              onClick={handleLogout}
-              style={{
-                ...navButtonBaseStyle,
-                background: ORANGE,
-                border: `1px solid ${ORANGE}`,
-                color: "#fff",
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={handleLogout} style={logoutButtonStyle}>
               ออกจากระบบ
             </button>
           </div>
@@ -738,12 +740,12 @@ export default function SiteNavbar() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 12,
-                background: "linear-gradient(135deg, #ee4d2d 0%, #f25a3a 100%)",
+                background: "linear-gradient(135deg, #ee4d2d 0%, #f04424 100%)",
                 color: "#fff",
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, opacity: 0.9, fontWeight: 700 }}>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>
                   เมนูผู้ใช้งาน
                 </div>
                 <div
@@ -766,8 +768,8 @@ export default function SiteNavbar() {
                   width: 36,
                   height: 36,
                   borderRadius: 10,
-                  border: "none",
-                  background: "rgba(255,255,255,0.22)",
+                  border: "1px solid rgba(255,255,255,0.55)",
+                  background: "rgba(255,255,255,0.18)",
                   color: "#fff",
                   fontSize: 20,
                   cursor: "pointer",

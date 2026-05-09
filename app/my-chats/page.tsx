@@ -41,6 +41,29 @@ type InquiryRoom = {
   updatedAt: string;
   expiresAt: string;
   messages: ChatMessage[];
+  // ===== ADDED: order/guest fields =====
+  orderId?: string;
+  isGuest?: boolean;
+  guestToken?: string;
+  guestPhone?: string;
+  customerPhone?: string;
+  channel?: "inquire" | "order_chat" | "remind";
+  orderSnapshot?: {
+    orderId: string;
+    customerName?: string;
+    phone?: string;
+    address?: string;
+    total?: number;
+    status?: string;
+    items?: Array<{
+      id?: string | number;
+      name?: string;
+      image?: string;
+      qty?: number;
+      price?: number;
+    }>;
+    createdAt?: string;
+  };
 };
 
 type StreamPayload = {
@@ -266,6 +289,14 @@ export default function MyChatsPage() {
 
           setSelectedRoomId((prev) => prev || payload.room!.id);
           scrollToBottom();
+
+          // ✅ ADDED: notify the navbar to refresh its unread badge instantly,
+          // so we don't depend on the navbar's slower polling interval.
+          try {
+            window.dispatchEvent(new Event("chat-updated"));
+          } catch {
+            /* ignore */
+          }
         }
       } catch (error) {
         console.error("SSE parse error:", error);
@@ -302,6 +333,13 @@ export default function MyChatsPage() {
     }));
 
     scrollToBottom();
+
+    // ✅ ADDED: tell navbar the unread count likely went down.
+    try {
+      window.dispatchEvent(new Event("chat-read"));
+    } catch {
+      /* ignore */
+    }
   }, [selectedRoom?.id, selectedRoom?.messages.length]);
 
   const totalUnread = useMemo(() => {
@@ -582,6 +620,36 @@ export default function MyChatsPage() {
                           {room.productName}
                         </div>
 
+                        {/* ===== ADDED: channel/order badge ===== */}
+                        {room.orderId ? (
+                          <div
+                            style={{
+                              display: "inline-block",
+                              marginTop: 6,
+                              fontSize: 11,
+                              fontWeight: 800,
+                              color:
+                                room.channel === "remind"
+                                  ? "#c2410c"
+                                  : "#1d4ed8",
+                              background:
+                                room.channel === "remind"
+                                  ? "#fff7ed"
+                                  : "#eff6ff",
+                              border:
+                                room.channel === "remind"
+                                  ? "1px solid #fdba74"
+                                  : "1px solid #bfdbfe",
+                              borderRadius: 999,
+                              padding: "3px 8px",
+                            }}
+                          >
+                            {room.channel === "remind" ? "ทวงของ" : "แชทคำสั่งซื้อ"} • #
+                            {room.orderId}
+                          </div>
+                        ) : null}
+                        {/* ====================================== */}
+
                         <div
                           style={{
                             marginTop: 4,
@@ -756,7 +824,13 @@ export default function MyChatsPage() {
 </div>
 
                   <Link
-                    href={`/chat/product/${selectedRoom.productId}`}
+                    href={
+                      selectedRoom.orderId
+                        ? `/order-chat?orderId=${encodeURIComponent(
+                            selectedRoom.orderId
+                          )}`
+                        : `/chat/product/${selectedRoom.productId}`
+                    }
                     style={{
                       textDecoration: "none",
                       background: "#ee4d2d",

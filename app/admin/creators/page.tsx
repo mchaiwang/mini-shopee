@@ -6,7 +6,11 @@ export default function AdminCreatorsPage() {
   const [users, setUsers] = useState<any[]>([]);
 
   const load = async () => {
-    const res = await fetch("/api/admin/creators");
+    // no-store + credentials → admin route ต้องสดทุกครั้ง
+    const res = await fetch("/api/admin/creators", {
+      cache: "no-store",
+      credentials: "include",
+    });
     const data = await res.json();
     setUsers(data.users || []);
   };
@@ -18,14 +22,21 @@ export default function AdminCreatorsPage() {
   const updateStatus = async (userId: string, action: string) => {
     await fetch("/api/admin/creators", {
       method: "PATCH",
+      cache: "no-store",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, action }),
     });
+    // โหลดสด ทันทีหลังอนุมัติ/ปฏิเสธ ไม่ต้อง clear cache
     load();
   };
 
   const save = async (u: any) => {
     await fetch("/api/admin/creators", {
       method: "PATCH",
+      cache: "no-store",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userId: u.id,
         action: "update",

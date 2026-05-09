@@ -46,6 +46,31 @@ function getOrderId(order: any) {
   return String(order?.id || order?.orderId || order?._id || "-");
 }
 
+function openOrderChat(opts: {
+  orderId: string;
+  source: "order_chat" | "remind";
+  loggedIn: boolean;
+  phone?: string;
+  name?: string;
+}) {
+  const { orderId, source, loggedIn, phone, name } = opts;
+  if (!orderId) return;
+
+  const ok = window.confirm("เปิดแชทเพื่อติดตามคำสั่งซื้อนี้ใช่ไหม?");
+  if (!ok) return;
+
+  const params = new URLSearchParams();
+  params.set("orderId", orderId);
+  params.set("source", source);
+
+  if (!loggedIn) {
+    if (phone) params.set("phone", phone);
+    if (name) params.set("name", name);
+  }
+
+  window.location.href = `/order-chat?${params.toString()}`;
+}
+
 export default function GuestOrdersPage() {
   const [phone, setPhone] = useState("");
   const [orders, setOrders] = useState<GuestOrder[]>([]);
@@ -55,6 +80,7 @@ export default function GuestOrdersPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [message, setMessage] = useState("");
+  const [searchedPhoneRaw, setSearchedPhoneRaw] = useState("");
 
   async function searchOrders() {
     const cleanPhone = phone.replace(/\D/g, "");
@@ -83,6 +109,7 @@ export default function GuestOrdersPage() {
       }
 
       setOrders(data.orders || []);
+      setSearchedPhoneRaw(cleanPhone);
 
       if (!data.orders || data.orders.length === 0) {
         setMessage("ไม่พบคำสั่งซื้อจากเบอร์นี้ กรุณาตรวจสอบเบอร์โทรอีกครั้ง");
@@ -137,7 +164,7 @@ export default function GuestOrdersPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("justOrdered") === "1") {
       setMessage(
-        "สั่งซื้อสำเร็จแล้ว กรอกเบอร์โทรที่ใช้สั่งซื้อเพื่อตรวจสอบสถานะหรือทวงของ"
+        "สั่งซื้อสำเร็จแล้ว กรอกเบอร์โทรที่ใช้สั่งซื้อเพื่อตรวจสอบสถานะหรือทักแชทตามของ"
       );
     }
   }, []);
@@ -229,12 +256,19 @@ export default function GuestOrdersPage() {
                   )}
 
                   <div style={actionRow}>
-                    <a
-                      href={`/my-chats?orderId=${encodeURIComponent(orderIdText)}`}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openOrderChat({
+                          orderId: orderIdText,
+                          source: "remind",
+                          loggedIn: true,
+                        })
+                      }
                       style={chatButton}
                     >
-                      💬 ติดต่อร้าน / ทวงของ
-                    </a>
+                      💬 ทักแชท / ตามของ
+                    </button>
 
                     <a href="/orders" style={backButton}>
                       ดูหน้าคำสั่งซื้อแบบเต็ม
@@ -249,7 +283,7 @@ export default function GuestOrdersPage() {
         <>
           <section style={heroCard}>
             <div style={smallBadge}>สำหรับลูกค้าที่ยังไม่ได้สมัครสมาชิก</div>
-            <h1 style={title}>ตรวจสอบคำสั่งซื้อ / ทวงของ</h1>
+            <h1 style={title}>ตรวจสอบคำสั่งซื้อ / ตามของ</h1>
             <p style={desc}>
               กรอกเบอร์โทรที่ใช้สั่งซื้อ ระบบจะแสดงคำสั่งซื้อของคุณทันที
               โดยไม่ต้องเข้าสู่ระบบ
@@ -275,13 +309,13 @@ export default function GuestOrdersPage() {
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
-                {loading ? "กำลังค้นหา..." : "ทวงของ / ตรวจสอบ"}
+                {loading ? "กำลังค้นหา..." : "ตามของ / ตรวจสอบ"}
               </button>
             </div>
 
             <div style={trustBox}>
               🛡️ ร้านสามารถตรวจสอบคำสั่งซื้อจากเบอร์โทรของคุณได้
-              หากไม่ได้รับสินค้า สามารถกดปุ่มทักแชทเพื่อทวงของได้ทันที
+              หากไม่ได้รับสินค้า สามารถกดปุ่มทักแชท / ตามของได้ทันที
             </div>
           </section>
 
@@ -363,18 +397,27 @@ export default function GuestOrdersPage() {
                     ) : (
                       <div style={warningText}>
                         ยังไม่มีเลขพัสดุ หากเกินเวลาที่ร้านแจ้งไว้
-                        สามารถทักแชทเพื่อทวงของได้
+                        สามารถทักแชทเพื่อตามของได้
                       </div>
                     )}
                   </div>
 
                   <div style={actionRow}>
-                    <a
-                      href={`/my-chats?orderId=${encodeURIComponent(order.id)}`}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openOrderChat({
+                          orderId: order.id,
+                          source: "remind",
+                          loggedIn: false,
+                          phone: searchedPhoneRaw,
+                          name: order.name || "",
+                        })
+                      }
                       style={chatButton}
                     >
-                      💬 ทักแชท / ทวงของ
-                    </a>
+                      💬 ทักแชท / ตามของ
+                    </button>
 
                     <a href="/" style={backButton}>
                       กลับไปเลือกสินค้า
@@ -634,13 +677,17 @@ const chatButton: React.CSSProperties = {
   textDecoration: "none",
   background: "linear-gradient(135deg, #ee4d2d 0%, #ff7337 100%)",
   color: "#fff",
+  border: "none",
   borderRadius: 16,
   padding: "14px 18px",
   fontWeight: 900,
+  fontSize: 15,
+  cursor: "pointer",
+  boxShadow: "0 8px 18px rgba(238,77,45,0.22)",
 };
 
 const backButton: React.CSSProperties = {
-  flex: "1 1 220px",
+  flex: "1 1 180px",
   textAlign: "center",
   textDecoration: "none",
   background: "#fff",

@@ -30,8 +30,10 @@ export async function POST(req: Request) {
     }
 
     user.passwordHash = await bcrypt.hash(newPassword, 10);
-    user.otpCode = "";
-    user.otpExpiresAt = "";
+user.emailVerified = true;
+user.otpCode = "";
+user.otpPurpose = "";
+user.otpExpiresAt = "";
 
     fs.writeFileSync(filePath, JSON.stringify(users, null, 2));
 

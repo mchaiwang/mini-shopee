@@ -40,10 +40,21 @@ export async function PATCH(req: NextRequest) {
       users[index].creatorEnabled = true;
     }
 
-    if (action === "reject") {
-      users[index].creatorStatus = "rejected";
-      users[index].creatorEnabled = false;
-    }
+   if (action === "reject") {
+  users.creatorStatus = "";
+  users.isCreator = false;
+
+  // ล้างข้อมูลครีเอเตอร์
+  users.creatorCode = "";
+  users.creatorDisplayName = "";
+
+  users.creatorPayment = {
+    promptPay: "",
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+  };
+}
 
     if (action === "disable") {
       users[index].creatorEnabled = false;

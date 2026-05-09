@@ -39,6 +39,19 @@ function LoginPageInner() {
     resetPassword: "กรอก OTP และรหัสผ่านใหม่",
   };
 
+  // ต่อ ?v=Date.now() ไว้กัน LINE / Chrome มือถือเอา HTML เก่ามาแสดง
+  // หลัง login สำเร็จ — สดทันที ไม่ต้อง clear cache
+  function withCacheBust(url: string) {
+    try {
+      const u = new URL(url, window.location.origin);
+      u.searchParams.set("v", String(Date.now()));
+      return u.pathname + u.search + u.hash;
+    } catch {
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}v=${Date.now()}`;
+    }
+  }
+
   async function handleSubmit() {
     try {
       setLoading(true);
@@ -47,6 +60,8 @@ function LoginPageInner() {
         const res = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          credentials: "include",
           body: JSON.stringify({ email: form.email, password: form.password }),
         });
 
@@ -58,8 +73,10 @@ function LoginPageInner() {
         }
 
         window.dispatchEvent(new Event("auth-changed"));
+        // hard navigate + cache bust → ทำให้หน้าใหม่โหลดสด
+        // user เห็นข้อมูลตัวเองทันที ไม่ค้างกับ state guest
         setTimeout(() => {
-          location.href = nextUrl;
+          location.href = withCacheBust(nextUrl);
         }, 300);
         return;
       }
@@ -68,6 +85,8 @@ function LoginPageInner() {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          credentials: "include",
           body: JSON.stringify({
             name: form.name,
             email: form.email,
@@ -84,23 +103,25 @@ function LoginPageInner() {
 
         setDevOtp(data?.devOtp || "");
 
-setForm({
-  name: "",
-  email: form.email,
-  password: "",
-  otp: "",
-  newPassword: "",
-});
+        setForm({
+          name: "",
+          email: form.email,
+          password: "",
+          otp: "",
+          newPassword: "",
+        });
 
-alert("สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
-setMode("verifyOtp");
-return;
+        alert("สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
+        setMode("verifyOtp");
+        return;
       }
 
       if (mode === "verifyOtp") {
         const res = await fetch("/api/auth/verify-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          credentials: "include",
           body: JSON.stringify({ email: form.email, otp: form.otp }),
         });
 
@@ -121,6 +142,8 @@ return;
         const res = await fetch("/api/auth/forgot-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          credentials: "include",
           body: JSON.stringify({ email: form.email }),
         });
 
@@ -141,6 +164,8 @@ return;
         const res = await fetch("/api/auth/reset-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          credentials: "include",
           body: JSON.stringify({
             email: form.email,
             otp: form.otp,

@@ -485,7 +485,7 @@ export function BrochureCreatorCTA({
           fontWeight: 800,
         }}
       >
-        แชร์ได้ทันทีผ่าน:
+        โพสรูปใบปลิวผ่าน:
         <br />
         Facebook • TikTok • LINE • กลุ่มแมว
       </div>
@@ -622,7 +622,7 @@ export function CreatorFinanceTipsCard() {
 /* 6) Quick Action Buttons — โชว์เมื่อ creator approved         */
 /* ----------------------------------------------------------- */
 export function CreatorQuickActions({
-  brochureHref = "/creator/reviews/new",
+  brochureHref = "/orders",
   shareHref = "/creator/reviews",
   earningsHref = "/account/finance",
 }: {

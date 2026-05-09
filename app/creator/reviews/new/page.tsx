@@ -545,15 +545,14 @@ const orderId = searchParams.get("orderId") || "";
             return;
           }
 
-          if (
-            foundOrder.status !== "จัดส่งแล้ว" &&
-            foundOrder.status !== "สำเร็จแล้ว"
-          ) {
-            alert("สามารถรีวิวได้เฉพาะออเดอร์ที่จัดส่งแล้วหรือสำเร็จแล้ว");
-            window.location.href = "/orders";
-            return;
-          }
-
+         if (
+  foundOrder.status !== "ได้รับสินค้าแล้ว" &&
+  foundOrder.status !== "สำเร็จแล้ว"
+) {
+  alert("สามารถรีวิวได้เฉพาะออเดอร์ที่ได้รับสินค้าแล้วหรือสำเร็จแล้ว");
+  window.location.href = "/orders";
+  return;
+}
           setOrder(foundOrder);
           setEditingReviewId("");
 

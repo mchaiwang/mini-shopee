@@ -1,1 +1,98 @@
-[]
+[
+  {
+    "id": "ORD-1778311985375",
+    "userId": "user-1778311900208",
+    "ownerId": "user-1778311900208",
+    "email": "root2552@gmail.com",
+    "fullName": "มีชัย",
+    "phone": "0819911335",
+    "address": "หัวลำ ท่าหลวง ลพบุรี",
+    "note": "ทดลองซื้อ",
+    "items": [
+      {
+        "id": 2,
+        "name": "Doga500",
+        "slug": "doga500",
+        "price": 230,
+        "image": "/uploads/products/1774277776190-adv5.jpg",
+        "images": [
+          "/uploads/products/1774277776190-adv5.jpg",
+          "/uploads/products/1774277805196-feed.jpg",
+          "/uploads/products/1774277837123-foodblow.jpg"
+        ],
+        "shortDescription": "ทานทุก 15วัน โดยทาน 1 ช้อนต่อน้ำหนัก 4 กิโลกร้มเช่นถ้าสุนัขหนัก 12 กิโลกร้มก็ทาน 3 ช้อนต่อครั้งแล้วเว้น 15 วันจะสังเกตุเห็บหมัดหล่นตอนกวาดพื้นและจะคันน้อยลง ระหว่างรอทานครั้งที่ 2",
+        "category": "สัตว์เลี้ยง > สุนัข > เห็บหมัดสุนัข",
+        "stock": 100,
+        "reviewUrl": "https://s.shopee.co.th/50UZQEu8ok?share_channel_code=6",
+        "active": true,
+        "featured": true,
+        "problemType": "ticks-mites",
+        "symptomTags": [
+          "เห็บ",
+          "หมัด",
+          "คัน",
+          "ขี้เรื้อน"
+        ],
+        "petTypes": [
+          "dog"
+        ],
+        "reviewMode": "internal_video",
+        "reviewEnabled": true,
+        "reviewSource": "creator_platform",
+        "commissionEnabled": true,
+        "commissionRate": 0.1,
+        "creatorEligible": true,
+        "requiresVerifiedBuyerForReview": true,
+        "status": "published",
+        "sortOrder": 98,
+        "seoTitle": "Doga500",
+        "seoDescription": "รักษาขี้เรื้อน เห็บ หมัด สำหรับสุนัข",
+        "reviewStats": {
+          "videos": 4,
+          "views": 192,
+          "clicks": 24,
+          "orders": 8,
+          "conversionRate": 0.3333
+        },
+        "inventory": {
+          "trackStock": true,
+          "allowBackorder": false,
+          "lowStockThreshold": 10
+        },
+        "flags": {
+          "isFipProduct": false,
+          "isTopSeller": true,
+          "isNewArrival": false
+        },
+        "updatedAt": "2026-04-13T15:30:00.000Z",
+        "variantName": "ขวดพลาสติกขาว",
+        "defaultReviewId": "review-1776500618859",
+        "brochureEnabled": true,
+        "creatorFlowEnabled": true,
+        "descriptionLong": "รักษาขี้เรื้อน เห็บ หมัด สำหรับสุนัขเหมาะสำหรับการดูแลปัญหาเห็บ หมัด อาการคัน และขี้เรื้อนในสุนัข",
+        "careNote": "จำรัสฟาร์มแนะนำให้เลือกสินค้าตามอาการจริงของสัตว์เลี้ยง และสามารถทักปรึกษาก่อนสั่งซื้อได้",
+        "qty": 1,
+        "refReview": "",
+        "creatorName": ""
+      }
+    ],
+    "total": 230,
+    "paymentMethod": "cod",
+    "slip": "",
+    "slipName": "",
+    "status": "ได้รับสินค้าแล้ว",
+    "createdAt": "2026-05-09T07:33:05.375Z",
+    "shippingAddress": {
+      "fullName": "มีชัย",
+      "phone": "0819911335",
+      "email": "root2552@gmail.com",
+      "address": "หัวลำ ท่าหลวง ลพบุรี"
+    },
+    "refReview": "",
+    "commissionTracked": false,
+    "commissionAmount": 0,
+    "commissionOwnerUserId": "",
+    "commissionStatus": "",
+    "deliveredAt": "2026-05-09T07:35:49.311Z"
+  }
+]

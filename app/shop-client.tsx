@@ -1038,7 +1038,7 @@ showAddedToCartMessage();
             position: "relative",
             width: "100%",
             aspectRatio: "9 / 13",
-            background: "#111",
+           background: "linear-gradient(135deg,#166534,#15803d)",
             overflow: "hidden",
           }}
         >
@@ -1171,18 +1171,23 @@ showAddedToCartMessage();
               onClick={() => {
                 router.push(review.reviewLink || `/brochure/${review.id}`);
               }}
-              style={{
-                height: isMobile ? 36 : 40,
-                borderRadius: 8,
-                border: "none",
-                background: "#111",
-                color: "#fff",
-                cursor: "pointer",
-                fontWeight: 800,
-                fontSize: isMobile ? 12 : 14,
-              }}
+  style={{
+  height: isMobile ? 36 : 40,
+  borderRadius: 8,
+  border: "none",
+  background: "linear-gradient(135deg,#166534,#15803d)",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 800,
+  fontSize: isMobile ? 11 : 14,
+  boxShadow: "0 4px 12px rgba(21,128,61,0.25)",
+  padding: "0 10px",
+  lineHeight: 1.15,
+  textAlign: "center",
+  whiteSpace: "normal",
+}}
             >
-              ดูวิธีรักษา
+             ดูเคสที่ใช้จริง
             </button>
             <button
               onClick={() => addProductFromReviewToCart(review)}
@@ -1197,7 +1202,7 @@ showAddedToCartMessage();
                 fontSize: isMobile ? 12 : 14,
               }}
             >
-              ซื้อจากรีวิวนี้
+             อุดหนุนครีเอเตอร์นี้
             </button>
           </div>
         </div>
@@ -1788,23 +1793,35 @@ showAddedToCartMessage();
                       </span>
                     </div>
 
-                    <button
-                      onClick={goToCheckout}
-                      style={{
-                        width: "100%",
-                        padding: "12px 14px",
-                        borderRadius: 6,
-                        border: "none",
-                        background: "#ee4d2d",
-                        color: "#fff",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        marginBottom: 10,
-                        fontSize: 15,
-                      }}
-                    >
-                      สั่งซื้อ
-                    </button>
+                   <button
+  onClick={goToCheckout}
+  style={{
+    width: "100%",
+    padding: "12px 14px",
+    borderRadius: 6,
+    border: "none",
+    background: "#ee4d2d",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+    marginBottom: 8,
+    fontSize: 15,
+  }}
+>
+  จัดส่ง / วิธีชำระเงิน
+</button>
+
+<div
+  style={{
+    fontSize: 12,
+    color: "#777",
+    textAlign: "center",
+    lineHeight: 1.5,
+    marginBottom: 12,
+  }}
+>
+  ตรวจสอบที่อยู่และวิธีชำระก่อนยืนยันคำสั่งซื้อ
+</div>
 
                     <button
                       onClick={() => {

@@ -123,9 +123,13 @@ type AuthUser = {
   role?: string;
 };
 
-const ordersFile = path.join(process.cwd(), "data", "orders.json");
-const reviewsFile = path.join(process.cwd(), "data", "reviews.json");
-const commissionsFile = path.join(process.cwd(), "data", "commissions.json");
+const DATA_DIR = path.join(process.cwd(), "data");
+
+console.log("DATA_DIR =", DATA_DIR);
+
+const ordersFile = path.join(DATA_DIR, "orders.json");
+const reviewsFile = path.join(DATA_DIR, "reviews.json");
+const commissionsFile = path.join(DATA_DIR, "commissions.json");
 
 function ensureJsonFile(filePath: string, fallback: unknown) {
   try {
@@ -225,10 +229,7 @@ function getEffectiveRefReview(order: Order) {
 
 function isEligibleOrderStatusForCommission(status?: string) {
   const normalized = String(status || "").trim();
-  return (
-    normalized === "ได้รับสินค้าแล้ว" ||
-    normalized === "สำเร็จแล้ว"
-  );
+  return normalized === "ได้รับสินค้าแล้ว";
 }
 
 function createCommissionIfNeeded(order: Order) {
@@ -424,7 +425,11 @@ if (!userId && body.email) {
 
     const orders = readOrders();
     orders.unshift(newOrder);
-    writeOrders(orders);
+
+console.log("WRITING ORDER TO =", ordersFile);
+console.log("ORDER COUNT =", orders.length);
+
+writeOrders(orders);
 
     if (newOrder.refReview) {
       createCommissionIfNeeded(newOrder);
@@ -467,9 +472,9 @@ export async function PUT(request: NextRequest) {
         orders[index].deliveredAt = new Date().toISOString();
       }
 
-      const becameDelivered =
-        (newStatus === "ได้รับสินค้าแล้ว" || newStatus === "สำเร็จแล้ว") &&
-        prevStatus !== newStatus;
+     const becameDelivered =
+  newStatus === "ได้รับสินค้าแล้ว" &&
+  prevStatus !== newStatus;
 
       if (becameDelivered && orders[index].commissionTracked) {
         const commissions = readCommissions();
