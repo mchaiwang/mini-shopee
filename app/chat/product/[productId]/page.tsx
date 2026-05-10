@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useToast } from "@/app/components/ToastProvider";
 
 type UserMe = {
   id: string;
@@ -83,6 +84,8 @@ function getMessageType(msg: ChatMessage): "text" | "product" | "image" {
 }
 
 export default function ProductChatPage() {
+  const { showToast } = useToast();
+
   const params = useParams();
   const router = useRouter();
   const productId = Number(params.productId);
@@ -294,7 +297,7 @@ export default function ProductChatPage() {
     if (uploadingImage) return;
 
     if (file.size > 3 * 1024 * 1024) {
-      alert("ไฟล์รูปใหญ่เกินไป (สูงสุด 3 MB)");
+      showToast("warning", "ไฟล์รูปใหญ่เกินไป (สูงสุด 3 MB)");
       return;
     }
 
@@ -327,7 +330,7 @@ export default function ProductChatPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || "ส่งรูปไม่สำเร็จ");
+        showToast("error", data?.error || "ส่งรูปไม่สำเร็จ");
         return;
       }
 
@@ -335,7 +338,7 @@ export default function ProductChatPage() {
       scrollToBottom();
     } catch (error) {
       console.error("sendImageMessage failed:", error);
-      alert("ส่งรูปไม่สำเร็จ");
+      showToast("error", "ส่งรูปไม่สำเร็จ");
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

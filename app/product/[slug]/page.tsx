@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 import { ReviewBecomeCreatorCTA } from "@/app/components/creator-promo";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Product = {
   id: number;
@@ -110,6 +111,8 @@ function renderStars(rating: number) {
 }
 
 function ProductSlugPageInner() {
+  const { showToast } = useToast();
+
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -349,10 +352,10 @@ useEffect(() => {
         return;
       }
 
-      alert("เพิ่มสินค้าลงตะกร้าแล้ว");
+      showToast("success", "เพิ่มสินค้าลงตะกร้าแล้ว");
     } catch (error) {
       console.error("addToCart error:", error);
-      alert("เพิ่มสินค้าไม่สำเร็จ");
+      showToast("error", "เพิ่มสินค้าไม่สำเร็จ");
     }
   };
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useToast } from "@/app/components/ToastProvider";
 
 type UserItem = {
   id: string;
@@ -13,6 +14,8 @@ type UserItem = {
 };
 
 export default function AdminUsersPage() {
+  const { showToast } = useToast();
+
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string>("");
@@ -26,7 +29,7 @@ export default function AdminUsersPage() {
       setUsers(Array.isArray(data.users) ? data.users : []);
     } catch (error) {
       console.error(error);
-      alert("โหลดรายชื่อผู้ใช้งานไม่สำเร็จ");
+      showToast("error", "โหลดรายชื่อผู้ใช้งานไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
@@ -64,14 +67,14 @@ export default function AdminUsersPage() {
         throw new Error(data?.error || "ลบไม่สำเร็จ");
       }
 
-      alert(
+      showToast("success", 
         `ลบผู้ใช้งานสำเร็จ\nลบ user 1 ราย\nลบ review ${data.deletedReviews ?? 0} รายการ`
       );
 
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
     } catch (error: any) {
       console.error(error);
-      alert(error?.message || "เกิดข้อผิดพลาด");
+      showToast("error", error?.message || "เกิดข้อผิดพลาด");
     } finally {
       setDeletingId("");
     }

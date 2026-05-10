@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import SiteNavbar from "@/app/components/site-navbar";
+import { ToastProvider } from "@/app/components/ToastProvider";
 
 export const metadata: Metadata = {
   title: "จำรัสฟาร์ม - Herbal Store",
   description: "ร้านสมุนไพรออนไลน์ รีวิวจริงจากผู้ใช้",
+
   // กัน LINE in-app browser และ Chrome มือถือ cache HTML เก่า
   // ไม่กระทบ static assets (รูป/CSS/JS) เพราะ middleware เว้นไว้แล้ว
   other: {
@@ -39,9 +41,12 @@ export default function RootLayout({
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
       </head>
+
       <body>
-        <SiteNavbar />
-        {children}
+        <ToastProvider>
+          <SiteNavbar />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

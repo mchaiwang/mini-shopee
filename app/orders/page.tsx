@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { useToast } from "@/app/components/ToastProvider";
 
 type OrderItem = {
   id?: string | number;
@@ -78,6 +79,8 @@ function openOrderChat(opts: {
 }
 
 function OrdersPageInner() {
+  const { showToast } = useToast();
+
   const searchParams = useSearchParams();
   const isMobile = useIsMobile(640);
 
@@ -350,12 +353,12 @@ return matchedById || matchedByEmail;
       }));
 
     if (validItems.length === 0) {
-      alert("ไม่พบรายการสินค้าที่จะรีวิว");
+      showToast("error", "ไม่พบรายการสินค้าที่จะรีวิว");
       return;
     }
 
     if (reviewText.trim().length < 10) {
-      alert("กรุณาเขียนรีวิวอย่างน้อย 10 ตัวอักษร");
+      showToast("warning", "กรุณาเขียนรีวิวอย่างน้อย 10 ตัวอักษร");
       return;
     }
 
@@ -384,16 +387,16 @@ return matchedById || matchedByEmail;
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ส่งรีวิวไม่สำเร็จ");
+        showToast("error", data?.message || "ส่งรีวิวไม่สำเร็จ");
         return;
       }
 
-      alert("ส่งรีวิวสำเร็จ ขอบคุณสำหรับการให้คะแนน");
+      showToast("success", "ส่งรีวิวสำเร็จ ขอบคุณสำหรับการให้คะแนน");
       closeReviewModal();
       await loadOrders();
     } catch (error) {
       console.error(error);
-      alert("ส่งรีวิวไม่สำเร็จ");
+      showToast("error", "ส่งรีวิวไม่สำเร็จ");
     } finally {
       setSubmittingReview(false);
     }

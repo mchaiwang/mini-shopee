@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { useToast } from "@/app/components/ToastProvider";
 
 type CartItem = {
   id?: string | number;
@@ -95,6 +96,8 @@ function normalizeCartItems(items: unknown): CartItem[] {
 }
 
 export default function CheckoutPage() {
+  const { showToast } = useToast();
+
   const router = useRouter();
   const isMobile = useIsMobile(640);
 
@@ -240,27 +243,27 @@ export default function CheckoutPage() {
 
   async function placeOrder() {
     if (!form.name.trim()) {
-      alert("กรุณากรอกชื่อผู้รับ");
+      showToast("warning", "กรุณากรอกชื่อผู้รับ");
       return;
     }
 
     if (!form.phone.trim()) {
-      alert("กรุณากรอกเบอร์โทร");
+      showToast("warning", "กรุณากรอกเบอร์โทร");
       return;
     }
 
     if (!form.address.trim()) {
-      alert("กรุณากรอกที่อยู่จัดส่ง");
+      showToast("warning", "กรุณากรอกที่อยู่จัดส่ง");
       return;
     }
 
     if (!cart.length) {
-      alert("ไม่มีสินค้าในตะกร้า");
+      showToast("warning", "ไม่มีสินค้าในตะกร้า");
       return;
     }
 
     if (paymentMethod === "bank_transfer" && !slip) {
-      alert("กรุณาแนบหลักฐานการโอนเงิน");
+      showToast("warning", "กรุณาแนบหลักฐานการโอนเงิน");
       return;
     }
 
@@ -305,7 +308,7 @@ export default function CheckoutPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.message || data?.error || "สั่งซื้อไม่สำเร็จ");
+        showToast("error", data?.message || data?.error || "สั่งซื้อไม่สำเร็จ");
         return;
       }
 
@@ -326,7 +329,7 @@ export default function CheckoutPage() {
       setCart([]);
       window.dispatchEvent(new Event("cart-updated"));
 
-      alert("สั่งซื้อสำเร็จ");
+      showToast("success", "สั่งซื้อสำเร็จ");
 
       if (loggedIn) {
   router.push("/orders?justOrdered=1");
@@ -335,7 +338,7 @@ export default function CheckoutPage() {
 }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดระหว่างสั่งซื้อ");
+      showToast("error", "เกิดข้อผิดพลาดระหว่างสั่งซื้อ");
     } finally {
       setPlacing(false);
     }

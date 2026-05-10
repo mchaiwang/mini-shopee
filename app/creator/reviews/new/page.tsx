@@ -2,6 +2,7 @@
 
 import { Suspense, ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useToast } from "@/app/components/ToastProvider";
 
 type OrderItem = {
   id?: string | number;
@@ -171,6 +172,8 @@ function normalizeReviewTitles(input: any): ReviewTitleItem[] {
 }
 
 function CreatorNewReviewPageInner() {
+  const { showToast } = useToast();
+
   const searchParams = useSearchParams();
  const reviewId = searchParams.get("reviewId") || "";
 const orderId = searchParams.get("orderId") || "";
@@ -303,7 +306,7 @@ const orderId = searchParams.get("orderId") || "";
   // ✅ จำกัดขนาดไฟล์ (2MB)
   const MAX_SIZE = 2 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
-    alert("ไฟล์ใหญ่เกิน 2MB กรุณาเลือกรูปใหม่");
+    showToast("warning", "ไฟล์ใหญ่เกิน 2MB กรุณาเลือกรูปใหม่");
     return;
   }
 
@@ -350,7 +353,7 @@ const orderId = searchParams.get("orderId") || "";
 
   } catch (error: any) {
     console.error(error);
-    alert(error?.message || "อัปโหลดรูปไม่สำเร็จ");
+    showToast("error", error?.message || "อัปโหลดรูปไม่สำเร็จ");
   } finally {
     setSlideUploading(index, false);
     e.target.value = "";
@@ -430,7 +433,7 @@ const orderId = searchParams.get("orderId") || "";
               cache: "no-store",
               credentials: "include",
             }),
-            fetch("/api/review-titles", {
+            fetch("/api/admin/review-titles", {
               cache: "no-store",
               credentials: "include",
             }),
@@ -441,7 +444,7 @@ const orderId = searchParams.get("orderId") || "";
           ]);
 
         if (!authRes.ok) {
-          alert("กรุณาเข้าสู่ระบบก่อน");
+          showToast("warning", "กรุณาเข้าสู่ระบบก่อน");
           window.location.href = "/login";
           return;
         }
@@ -451,7 +454,7 @@ const orderId = searchParams.get("orderId") || "";
         setCurrentUser(me);
 
         if (!isCreatorUser(me)) {
-          alert("หน้านี้สำหรับครีเอเตอร์ที่ได้รับอนุมัติแล้ว");
+          showToast("warning", "หน้านี้สำหรับครีเอเตอร์ที่ได้รับอนุมัติแล้ว");
           window.location.href = "/orders";
           return;
         }
@@ -486,13 +489,13 @@ const orderId = searchParams.get("orderId") || "";
             null;
 
           if (!foundReview) {
-            alert("ไม่พบรีวิวที่ต้องการแก้ไข");
+            showToast("error", "ไม่พบรีวิวที่ต้องการแก้ไข");
             window.location.href = "/account/finance";
             return;
           }
 
           if (me?.id && String(foundReview.userId || "") !== String(me.id)) {
-            alert("คุณไม่มีสิทธิ์แก้ไขรีวิวนี้");
+            showToast("warning", "คุณไม่มีสิทธิ์แก้ไขรีวิวนี้");
             window.location.href = "/account/finance";
             return;
           }
@@ -521,7 +524,7 @@ const orderId = searchParams.get("orderId") || "";
             null;
 
           if (!foundOrder) {
-            alert("ไม่พบออเดอร์ที่ต้องการรีวิว");
+            showToast("error", "ไม่พบออเดอร์ที่ต้องการรีวิว");
             window.location.href = "/orders";
             return;
           }
@@ -540,7 +543,7 @@ const orderId = searchParams.get("orderId") || "";
             (meEmail && orderEmail && meEmail === orderEmail);
 
           if (!isOwner) {
-            alert("คุณไม่มีสิทธิ์รีวิวออเดอร์นี้");
+            showToast("warning", "คุณไม่มีสิทธิ์รีวิวออเดอร์นี้");
             window.location.href = "/orders";
             return;
           }
@@ -549,7 +552,7 @@ const orderId = searchParams.get("orderId") || "";
   foundOrder.status !== "ได้รับสินค้าแล้ว" &&
   foundOrder.status !== "สำเร็จแล้ว"
 ) {
-  alert("สามารถรีวิวได้เฉพาะออเดอร์ที่ได้รับสินค้าแล้วหรือสำเร็จแล้ว");
+  showToast("warning", "สามารถรีวิวได้เฉพาะออเดอร์ที่ได้รับสินค้าแล้วหรือสำเร็จแล้ว");
   window.location.href = "/orders";
   return;
 }
@@ -568,7 +571,7 @@ const orderId = searchParams.get("orderId") || "";
 
           setSelectedProductId(firstMatchedProductId);
         } else {
-          alert("ไม่พบข้อมูลสำหรับสร้างหรือแก้ไขรีวิว");
+          showToast("error", "ไม่พบข้อมูลสำหรับสร้างหรือแก้ไขรีวิว");
           window.location.href = "/orders";
           return;
         }
@@ -578,7 +581,7 @@ const orderId = searchParams.get("orderId") || "";
         }
       } catch (error) {
         console.error(error);
-        alert("โหลดหน้าสร้างรีวิวครีเอเตอร์ไม่สำเร็จ");
+        showToast("error", "โหลดหน้าสร้างรีวิวครีเอเตอร์ไม่สำเร็จ");
         window.location.href = "/orders";
       } finally {
         setLoading(false);
@@ -601,7 +604,7 @@ const orderId = searchParams.get("orderId") || "";
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ลบรีวิวไม่สำเร็จ");
+        showToast("error", data?.message || "ลบรีวิวไม่สำเร็จ");
         return;
       }
 
@@ -614,7 +617,7 @@ const orderId = searchParams.get("orderId") || "";
       }
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการลบรีวิว");
+      showToast("error", "เกิดข้อผิดพลาดในการลบรีวิว");
     }
   }
 
@@ -622,12 +625,12 @@ const orderId = searchParams.get("orderId") || "";
     if (!order || !currentUser) return;
 
     if (!selectedProductId) {
-      alert("กรุณาเลือกสินค้าที่ต้องการรีวิว");
+      showToast("warning", "กรุณาเลือกสินค้าที่ต้องการรีวิว");
       return;
     }
 
     if (!title.trim()) {
-      alert("กรุณาเลือกหัวข้อรีวิว");
+      showToast("warning", "กรุณาเลือกหัวข้อรีวิว");
       return;
     }
 
@@ -636,7 +639,7 @@ const orderId = searchParams.get("orderId") || "";
     );
 
     if (hasEmptySlide) {
-      alert("กรุณากรอกรูปและข้อความให้ครบทั้ง 5 หัวข้อ");
+      showToast("warning", "กรุณากรอกรูปและข้อความให้ครบทั้ง 5 หัวข้อ");
       return;
     }
 
@@ -686,11 +689,11 @@ const orderId = searchParams.get("orderId") || "";
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "บันทึกรีวิวไม่สำเร็จ");
+        showToast("error", data?.message || "บันทึกรีวิวไม่สำเร็จ");
         return;
       }
 
-      alert(isEditing ? "แก้ไขรีวิวเรียบร้อยแล้ว" : "ส่งรีวิวเรียบร้อยแล้ว");
+      showToast("success", isEditing ? "แก้ไขรีวิวเรียบร้อยแล้ว" : "ส่งรีวิวเรียบร้อยแล้ว");
 
       resetForm();
 
@@ -699,7 +702,7 @@ const orderId = searchParams.get("orderId") || "";
       }
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการบันทึกรีวิว");
+      showToast("error", "เกิดข้อผิดพลาดในการบันทึกรีวิว");
     } finally {
       setSaving(false);
     }

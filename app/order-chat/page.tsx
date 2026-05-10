@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useToast } from "@/app/components/ToastProvider";
 
 type UserMe = {
   id: string;
@@ -114,6 +115,8 @@ function writeGuestToken(orderId: string, token: string) {
 }
 
 function OrderChatInner() {
+  const { showToast } = useToast();
+
   const searchParams = useSearchParams();
   const orderIdParam = String(searchParams.get("orderId") || "").trim();
   const sourceParam =
@@ -297,7 +300,7 @@ function OrderChatInner() {
   const sendMessage = async () => {
     if (!room?.id || !message.trim() || sending) return;
     if (room.status === "closed") {
-      alert("ห้องแชทถูกปิดแล้ว");
+      showToast("error", "ห้องแชทถูกปิดแล้ว");
       return;
     }
 
@@ -326,7 +329,7 @@ function OrderChatInner() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || "ส่งข้อความไม่สำเร็จ");
+        showToast("error", data?.error || "ส่งข้อความไม่สำเร็จ");
         return;
       }
 
@@ -335,7 +338,7 @@ function OrderChatInner() {
       scrollToBottom();
     } catch (err) {
       console.error(err);
-      alert("ส่งข้อความไม่สำเร็จ");
+      showToast("error", "ส่งข้อความไม่สำเร็จ");
     } finally {
       setSending(false);
     }

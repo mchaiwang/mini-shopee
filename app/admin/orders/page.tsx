@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type OrderItem = {
   id?: string;
@@ -95,6 +96,8 @@ function getThaiDateKey(order: Order) {
 }
 
 export default function AdminOrdersPage() {
+  const { showToast } = useToast();
+
     
   
   const fallbackSender: SenderInfo = {
@@ -187,14 +190,14 @@ export default function AdminOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error || "อัปเดตสถานะไม่สำเร็จ");
+        showToast("error", data?.error || "อัปเดตสถานะไม่สำเร็จ");
         return;
       }
 
       await loadOrders();
     } catch (error) {
       console.error("updateStatus error:", error);
-      alert("อัปเดตสถานะไม่สำเร็จ");
+      showToast("error", "อัปเดตสถานะไม่สำเร็จ");
     } finally {
       setUpdatingId("");
     }
@@ -216,14 +219,14 @@ export default function AdminOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error || "ลบคำสั่งซื้อไม่สำเร็จ");
+        showToast("error", data?.error || "ลบคำสั่งซื้อไม่สำเร็จ");
         return;
       }
 
       await loadOrders();
     } catch (error) {
       console.error("deleteOrder error:", error);
-      alert("ลบคำสั่งซื้อไม่สำเร็จ");
+      showToast("error", "ลบคำสั่งซื้อไม่สำเร็จ");
     }
   }
 
@@ -243,7 +246,7 @@ export default function AdminOrdersPage() {
 
   async function updateSelectedOrders(status: string) {
     if (selectedOrderIds.length === 0) {
-      alert("กรุณาเลือกออเดอร์ก่อน");
+      showToast("warning", "กรุณาเลือกออเดอร์ก่อน");
       return;
     }
 
@@ -274,7 +277,7 @@ export default function AdminOrdersPage() {
       await loadOrders();
     } catch (error) {
       console.error("updateSelectedOrders error:", error);
-      alert(error instanceof Error ? error.message : "อัปเดตแบบชุดไม่สำเร็จ");
+      showToast("error", error instanceof Error ? error.message : "อัปเดตแบบชุดไม่สำเร็จ");
     } finally {
       setUpdatingId("");
     }
@@ -282,7 +285,7 @@ export default function AdminOrdersPage() {
 
   async function deleteSelectedOrders() {
     if (selectedOrderIds.length === 0) {
-      alert("กรุณาเลือกออเดอร์ก่อน");
+      showToast("warning", "กรุณาเลือกออเดอร์ก่อน");
       return;
     }
 
@@ -311,7 +314,7 @@ export default function AdminOrdersPage() {
       await loadOrders();
     } catch (error) {
       console.error("deleteSelectedOrders error:", error);
-      alert(error instanceof Error ? error.message : "ลบแบบชุดไม่สำเร็จ");
+      showToast("error", error instanceof Error ? error.message : "ลบแบบชุดไม่สำเร็จ");
     } finally {
       setUpdatingId("");
     }
@@ -578,7 +581,7 @@ function escapeHtml(value: unknown) {
 
   function openPrintWindowForOrders(targetOrders: Order[]) {
     if (targetOrders.length === 0) {
-      alert("กรุณาเลือกออเดอร์ก่อนพิมพ์ใบปะหน้า");
+      showToast("warning", "กรุณาเลือกออเดอร์ก่อนพิมพ์ใบปะหน้า");
       return;
     }
 

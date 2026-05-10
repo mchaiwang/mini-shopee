@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useToast } from "@/app/components/ToastProvider";
 
 type ReviewSlide = {
   key?: string;
@@ -58,6 +59,8 @@ function renderStars(rating?: number) {
 }
 
 export default function AdminReviewsPage() {
+  const { showToast } = useToast();
+
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState("");
@@ -129,10 +132,10 @@ export default function AdminReviewsPage() {
       }
 
       setReviews((prev) => prev.filter((item) => item.id !== review.id));
-      alert("ลบรีวิวเรียบร้อยแล้ว");
+      showToast("success", "ลบรีวิวเรียบร้อยแล้ว");
     } catch (error: any) {
       console.error("delete review error:", error);
-      alert(error?.message || "เกิดข้อผิดพลาดในการลบรีวิว");
+      showToast("error", error?.message || "เกิดข้อผิดพลาดในการลบรีวิว");
     } finally {
       setDeletingId("");
     }

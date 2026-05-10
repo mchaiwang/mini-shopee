@@ -833,21 +833,20 @@ export default function SiteNavbar() {
               </Link>
             )}
 
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                handleLogout();
-              }}
-              className="mobile-menu-item danger"
-              style={{
-                background: "transparent",
-                border: "none",
-                width: "100%",
-                textAlign: "left",
-                cursor: "pointer",
-                marginTop: "auto",
-              }}
-            >
+           <button
+  onClick={() => {
+    setMenuOpen(false);
+    handleLogout();
+  }}
+  className="mobile-menu-item danger"
+  style={{
+    background: "transparent",
+    border: "none",
+    width: "100%",
+    textAlign: "left",
+    cursor: "pointer",
+  }}
+>
               <span style={{ fontSize: 20 }}>🚪</span>
               <span>ออกจากระบบ</span>
             </button>

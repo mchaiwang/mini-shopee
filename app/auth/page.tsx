@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type User = {
   id: number;
@@ -15,6 +16,8 @@ const USERS_KEY = "herbal_users";
 const CURRENT_USER_KEY = "herbal_current_user";
 
 export default function AuthPage() {
+  const { showToast } = useToast();
+
   const [mode, setMode] = useState<"login" | "register">("register");
 
   const [name, setName] = useState("");
@@ -25,7 +28,7 @@ export default function AuthPage() {
 
   const handleRegister = () => {
     if (!name || !email || !password || !phone || !address) {
-      alert("กรอกข้อมูลให้ครบ");
+      showToast("warning", "กรอกข้อมูลให้ครบ");
       return;
     }
 
@@ -33,7 +36,7 @@ export default function AuthPage() {
 
     const exists = users.find((u) => u.email === email);
     if (exists) {
-      alert("อีเมลนี้ถูกใช้แล้ว");
+      showToast("error", "อีเมลนี้ถูกใช้แล้ว");
       return;
     }
 
@@ -50,13 +53,13 @@ export default function AuthPage() {
     localStorage.setItem(USERS_KEY, JSON.stringify(updatedUsers));
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
 
-    alert("สมัครสมาชิกสำเร็จ");
+    showToast("success", "สมัครสมาชิกสำเร็จ");
     window.location.href = "/";
   };
 
   const handleLogin = () => {
     if (!email || !password) {
-      alert("กรอกอีเมลและรหัสผ่าน");
+      showToast("warning", "กรอกอีเมลและรหัสผ่าน");
       return;
     }
 
@@ -64,12 +67,12 @@ export default function AuthPage() {
     const found = users.find((u) => u.email === email && u.password === password);
 
     if (!found) {
-      alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      showToast("error", "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
       return;
     }
 
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(found));
-    alert("เข้าสู่ระบบสำเร็จ");
+    showToast("success", "เข้าสู่ระบบสำเร็จ");
     window.location.href = "/";
   };
 

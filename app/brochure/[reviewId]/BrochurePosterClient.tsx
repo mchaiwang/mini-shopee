@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import QRCode from "react-qr-code";
 import { BrochureCreatorCTA } from "@/app/components/creator-promo";
+import { useToast } from "@/app/components/ToastProvider";
 
 type TileItem = {
   image: string;
@@ -54,6 +56,31 @@ function getCartStorageKey() {
   return userId ? `cart_${userId}` : "cart_guest";
 }
 
+function getCurrentPageUrl() {
+  if (typeof window === "undefined") return "";
+  return window.location.href;
+}
+
+function buildShareText(headline: string, creatorCode: string, currentUrl: string) {
+  return [
+    "ลองดูรีวิวนี้",
+    headline,
+    "",
+    "เข้าเว็บ:",
+    "https://fipcatcare.com",
+    "",
+    "พิมพ์รหัส:",
+    creatorCode,
+    "",
+    currentUrl,
+  ].join("\n");
+}
+
+function openNewWindow(url: string) {
+  if (typeof window === "undefined") return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 function extractRefReviewFromLink(link?: string) {
   if (!link) return "";
 
@@ -76,10 +103,150 @@ export default function BrochurePosterClient({
   creatorCode?: string;
   productInfo?: ProductInfo;
 }) {
+  const { showToast } = useToast();
+
   const captureRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [showProductPage, setShowProductPage] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+
+
+  const copyCurrentLink = async (successText = "✅ คัดลอกลิงก์แล้ว") => {
+    const currentUrl = getCurrentPageUrl();
+
+    if (!currentUrl) {
+      showToast("error", "ไม่พบลิงก์สำหรับแชร์");
+      return false;
+    }
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = currentUrl;
+        input.style.position = "fixed";
+        input.style.left = "-9999px";
+        input.style.top = "-9999px";
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+
+      showToast("success", successText);
+      return true;
+    } catch (error) {
+      console.error("copy link error:", error);
+      showToast("error", "คัดลอกลิงก์ไม่สำเร็จ");
+      return false;
+    }
+  };
+
+  const handleNativeShare = async () => {
+    const currentUrl = getCurrentPageUrl();
+    const shareText = buildShareText(headline, creatorCode, currentUrl);
+
+    try {
+      if (navigator?.share) {
+        await navigator.share({
+          title: headline || "ใบปลิวรีวิว",
+          text: shareText,
+          url: currentUrl,
+        });
+        return;
+      }
+
+      await copyCurrentLink("คัดลอกลิงก์แล้ว สามารถนำไปแชร์ต่อได้ครับ");
+    } catch (error: any) {
+      if (error?.name === "AbortError") return;
+      console.error("native share error:", error);
+      await copyCurrentLink("คัดลอกลิงก์แล้ว สามารถนำไปแชร์ต่อได้ครับ");
+    }
+  };
+
+  const handleShareLine = () => {
+    const currentUrl = getCurrentPageUrl();
+    const shareText = buildShareText(headline, creatorCode, currentUrl);
+    openNewWindow(`https://line.me/R/share?text=${encodeURIComponent(shareText)}`);
+  };
+
+  const handleShareFacebook = () => {
+    const currentUrl = getCurrentPageUrl();
+    openNewWindow(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`
+    );
+  };
+
+  const handleShareMessenger = () => {
+    const currentUrl = getCurrentPageUrl();
+
+    try {
+      window.location.href = `fb-messenger://share/?link=${encodeURIComponent(currentUrl)}`;
+
+      window.setTimeout(() => {
+        copyCurrentLink("คัดลอกลิงก์แล้ว หาก Messenger ไม่เปิด ให้วางลิงก์ได้เลยครับ");
+      }, 1200);
+    } catch (error) {
+      console.error("messenger share error:", error);
+      copyCurrentLink("คัดลอกลิงก์แล้ว สามารถนำไปส่งใน Messenger ได้ครับ");
+    }
+  };
+
+  const handleDownloadQr = () => {
+    const svg = document.getElementById("brochure-share-qr");
+
+    if (!svg) {
+      showToast("error", "ไม่พบ QR สำหรับดาวน์โหลด");
+      return;
+    }
+
+    try {
+      const serializer = new XMLSerializer();
+      const svgText = serializer.serializeToString(svg);
+      const svgBlob = new Blob([svgText], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      const image = new Image();
+
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 900;
+        canvas.height = 900;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          URL.revokeObjectURL(svgUrl);
+          showToast("error", "ดาวน์โหลด QR ไม่สำเร็จ");
+          return;
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 90, 90, 720, 720);
+
+        const link = document.createElement("a");
+        link.download = `qr-brochure-${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        URL.revokeObjectURL(svgUrl);
+        showToast("success", "ดาวน์โหลด QR แล้ว");
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(svgUrl);
+        showToast("error", "ดาวน์โหลด QR ไม่สำเร็จ");
+      };
+
+      image.src = svgUrl;
+    } catch (error) {
+      console.error("download qr error:", error);
+      showToast("error", "ดาวน์โหลด QR ไม่สำเร็จ");
+    }
+  };
 
   const handleSaveImage = async () => {
     if (!captureRef.current || saving) return;
@@ -99,7 +266,7 @@ export default function BrochurePosterClient({
       link.click();
     } catch (error) {
       console.error("save jpg error:", error);
-      alert("สร้างไฟล์ JPG ไม่สำเร็จ");
+      showToast("error", "สร้างไฟล์ JPG ไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
@@ -107,7 +274,7 @@ export default function BrochurePosterClient({
 
   const handleBuyFromReview = () => {
     if (!productInfo?.id || !productInfo?.name) {
-      alert("ไม่พบข้อมูลสินค้าที่เชื่อมกับใบปลิวนี้");
+      showToast("error", "ไม่พบข้อมูลสินค้าที่เชื่อมกับใบปลิวนี้");
       return;
     }
 
@@ -119,7 +286,7 @@ export default function BrochurePosterClient({
         extractRefReviewFromLink(productInfo.reviewLink);
 
       if (!refReview) {
-        alert("ไม่พบรหัสใบปลิวสำหรับผูกคอมมิชชั่น");
+        showToast("error", "ไม่พบรหัสใบปลิวสำหรับผูกคอมมิชชั่น");
         return;
       }
 
@@ -177,7 +344,7 @@ export default function BrochurePosterClient({
       window.location.href = "/?fromCartAdd=1";
     } catch (error) {
       console.error("buyFromReview error:", error);
-      alert("เพิ่มสินค้าลงตะกร้าไม่สำเร็จ");
+      showToast("error", "เพิ่มสินค้าลงตะกร้าไม่สำเร็จ");
     } finally {
       setAddingToCart(false);
     }
@@ -220,6 +387,126 @@ export default function BrochurePosterClient({
         >
           {saving ? "กำลังสร้าง JPG..." : "📸 บันทึกเป็นใบปลิว JPG"}
         </button>
+
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 720,
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            flexWrap: "wrap",
+            padding: "4px 0 2px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleNativeShare}
+            style={{
+              border: "none",
+              background: "#8b5cf6",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "10px 14px",
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 8px 18px rgba(139,92,246,0.24)",
+            }}
+          >
+            📲 แชร์เลย
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareLine}
+            style={{
+              border: "none",
+              background: "#22c55e",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "10px 14px",
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 8px 18px rgba(34,197,94,0.24)",
+            }}
+          >
+            🟢 LINE
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareFacebook}
+            style={{
+              border: "none",
+              background: "#1877f2",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "10px 14px",
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 8px 18px rgba(24,119,242,0.24)",
+            }}
+          >
+            🔵 Facebook
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareMessenger}
+            style={{
+              border: "none",
+              background: "#06b6d4",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "10px 14px",
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 8px 18px rgba(6,182,212,0.24)",
+            }}
+          >
+            💬 Messenger
+          </button>
+
+          <button
+            type="button"
+            onClick={() => copyCurrentLink()}
+            style={{
+              border: "none",
+              background: "#6b7280",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "10px 14px",
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 8px 18px rgba(107,114,128,0.24)",
+            }}
+          >
+            📋 คัดลอกลิงก์
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowQrModal(true)}
+            style={{
+              border: "none",
+              background: "#111827",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "10px 14px",
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 8px 18px rgba(17,24,39,0.24)",
+            }}
+          >
+            🔳 QR
+          </button>
+        </div>
 
         <button
           onClick={() => setShowProductPage((v) => !v)}
@@ -558,6 +845,138 @@ style={{
 </div>
         </div>
       </div>
+
+      {showQrModal ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15,23,42,0.62)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 18,
+          }}
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 380,
+              background: "#fff",
+              borderRadius: 28,
+              padding: 22,
+              textAlign: "center",
+              boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
+              border: "1px solid #e5e7eb",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 54,
+                height: 54,
+                borderRadius: 18,
+                background: "#111827",
+                color: "#fff",
+                fontSize: 24,
+                marginBottom: 12,
+              }}
+            >
+              🔳
+            </div>
+
+            <h3
+              style={{
+                margin: "0 0 6px",
+                fontSize: 22,
+                lineHeight: 1.25,
+                color: "#111827",
+                fontWeight: 900,
+              }}
+            >
+              QR ใบปลิวรีวิว
+            </h3>
+
+            <div
+              style={{
+                color: "#64748b",
+                fontSize: 14,
+                fontWeight: 800,
+                lineHeight: 1.55,
+                marginBottom: 16,
+              }}
+            >
+              สแกนแล้วเข้าหน้านี้ทันที พร้อมรหัสครีเอเตอร์ {creatorCode}
+            </div>
+
+            <div
+              style={{
+                display: "inline-flex",
+                padding: 16,
+                background: "#fff",
+                borderRadius: 22,
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
+              }}
+            >
+              <QRCode
+                id="brochure-share-qr"
+                value={getCurrentPageUrl() || "https://fipcatcare.com"}
+                size={220}
+                level="M"
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                style={{
+                  border: "none",
+                  background: "#e5e7eb",
+                  color: "#111827",
+                  borderRadius: 999,
+                  padding: "11px 18px",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                ปิด
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadQr}
+                style={{
+                  border: "none",
+                  background: "#111827",
+                  color: "#fff",
+                  borderRadius: 999,
+                  padding: "11px 18px",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  boxShadow: "0 10px 22px rgba(17,24,39,0.22)",
+                }}
+              >
+                ดาวน์โหลด QR
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* CTA ชวนสมัครครีเอเตอร์ — ตอนล่างสุดของหน้าใบปลิว */}
       <div

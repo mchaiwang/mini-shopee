@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Product = {
   id: number;
@@ -403,6 +404,8 @@ function ProductReviewsSection({
 }
 
 function ShopClientInner() {
+  const { showToast } = useToast();
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const didHydrateCartRef = useRef(false);
@@ -702,7 +705,7 @@ searchText: [
     );
 
     if (!product) {
-      alert("ไม่พบสินค้าที่เชื่อมกับรีวิวนี้");
+      showToast("error", "ไม่พบสินค้าที่เชื่อมกับรีวิวนี้");
       return;
     }
 
@@ -752,7 +755,7 @@ searchText: [
 
   const goToCheckout = () => {
     if (cart.length === 0) {
-      alert("กรุณาเพิ่มสินค้าก่อน");
+      showToast("warning", "กรุณาเพิ่มสินค้าก่อน");
       return;
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Category = {
   id: string;
@@ -16,6 +17,8 @@ type EditState = {
 };
 
 export default function AdminCatalogPage() {
+  const { showToast } = useToast();
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,7 +50,7 @@ export default function AdminCatalogPage() {
       setCategories(Array.isArray(data?.categories) ? data.categories : []);
     } catch (error) {
       console.error(error);
-      alert("โหลด catalog ไม่สำเร็จ");
+      showToast("error", "โหลด catalog ไม่สำเร็จ");
       setCategories([]);
     } finally {
       setLoading(false);
@@ -73,7 +76,7 @@ export default function AdminCatalogPage() {
       const data = await res.json();
 
       if (!data?.success) {
-        alert("บันทึก catalog ไม่สำเร็จ");
+        showToast("error", "บันทึก catalog ไม่สำเร็จ");
         return false;
       }
 
@@ -81,7 +84,7 @@ export default function AdminCatalogPage() {
       return true;
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการบันทึก catalog");
+      showToast("error", "เกิดข้อผิดพลาดในการบันทึก catalog");
       return false;
     } finally {
       setSaving(false);

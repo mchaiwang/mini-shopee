@@ -7,6 +7,7 @@ import {
   CreatorQuickActions,
   CreatorPromoBanner,
 } from "@/app/components/creator-promo";
+import { useToast } from "@/app/components/ToastProvider";
 
 type ProfileForm = {
   name: string;
@@ -85,6 +86,8 @@ function getCreatorDisplayNameFromAuthCookie() {
   }
 }
 export default function ProfilePage() {
+  const { showToast } = useToast();
+
   const isMobile = useIsMobile(640);
 
   const [form, setForm] = useState<ProfileForm>({
@@ -194,33 +197,33 @@ export default function ProfilePage() {
 
   const applyCreator = async () => {
     if (!canApplyCreator) {
-      alert("ต้องเคยสั่งสินค้าจริง และ ได้รับสินค้าแล้ว ก่อน ถึงสมัครได้");
+      showToast("success", "ต้องเคยสั่งสินค้าจริง และ ได้รับสินค้าแล้ว ก่อน ถึงสมัครได้");
       return;
     }
 
     if (!creatorPayment.displayName.trim()) {
-      alert("กรุณากรอกชื่อที่จะแสดง");
+      showToast("warning", "กรุณากรอกชื่อที่จะแสดง");
       return;
     }
 
     if (paymentMethod === "promptpay") {
       if (!creatorPayment.promptPay.trim()) {
-        alert("กรุณากรอกพร้อมเพย์");
+        showToast("warning", "กรุณากรอกพร้อมเพย์");
         return;
       }
     }
 
     if (paymentMethod === "bank") {
       if (!creatorPayment.bankName.trim()) {
-        alert("กรุณาเลือกธนาคาร");
+        showToast("warning", "กรุณาเลือกธนาคาร");
         return;
       }
       if (!creatorPayment.accountName.trim()) {
-        alert("กรุณากรอกชื่อบัญชี");
+        showToast("warning", "กรุณากรอกชื่อบัญชี");
         return;
       }
       if (!creatorPayment.accountNumber.trim()) {
-        alert("กรุณากรอกเลขบัญชี");
+        showToast("warning", "กรุณากรอกเลขบัญชี");
         return;
       }
     }
@@ -259,11 +262,11 @@ export default function ProfilePage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "สมัครครีเอเตอร์ไม่สำเร็จ");
+        showToast("error", data?.message || "สมัครครีเอเตอร์ไม่สำเร็จ");
         return;
       }
 
-      alert(data?.message || "สมัครครีเอเตอร์สำเร็จ");
+      showToast("success", data?.message || "สมัครครีเอเตอร์สำเร็จ");
 
       const [authRes, profileRes] = await Promise.all([
         fetch("/api/auth/me", {
@@ -352,7 +355,7 @@ export default function ProfilePage() {
 
       window.dispatchEvent(new Event("auth-changed"));
     } catch {
-      alert("สมัครครีเอเตอร์ไม่สำเร็จ");
+      showToast("error", "สมัครครีเอเตอร์ไม่สำเร็จ");
     } finally {
       setApplyingCreator(false);
     }
@@ -371,7 +374,7 @@ export default function ProfilePage() {
         const me = authData?.user || null;
 
         if (!authRes.ok || !me) {
-          alert("กรุณาเข้าสู่ระบบก่อน");
+          showToast("warning", "กรุณาเข้าสู่ระบบก่อน");
           location.href = "/login";
           return;
         }
@@ -453,7 +456,7 @@ export default function ProfilePage() {
           : ordersData?.orders || [];
         setOrders(orderList);
       } catch {
-        alert("โหลดข้อมูลไม่สำเร็จ");
+        showToast("error", "โหลดข้อมูลไม่สำเร็จ");
       } finally {
         setLoading(false);
       }
@@ -477,12 +480,12 @@ export default function ProfilePage() {
       const data = await res.json().catch(() => null);
 
       if (res.ok) {
-        alert("บันทึกข้อมูลเรียบร้อย");
+        showToast("success", "บันทึกข้อมูลเรียบร้อย");
       } else {
-        alert(data?.error || "บันทึกไม่สำเร็จ");
+        showToast("error", data?.error || "บันทึกไม่สำเร็จ");
       }
     } catch {
-      alert("บันทึกไม่สำเร็จ");
+      showToast("error", "บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
     }

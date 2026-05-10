@@ -3,10 +3,13 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Mode = "login" | "register" | "verifyOtp" | "forgotPassword" | "resetPassword";
 
 function LoginPageInner() {
+  const { showToast } = useToast();
+
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
   const isMobile = useIsMobile(820);
@@ -69,7 +72,7 @@ function LoginPageInner() {
 
         if (!res.ok) {
   if (data?.needVerify) {
-    alert(data?.error || "บัญชีนี้ยังไม่ได้ยืนยัน OTP");
+    showToast("error", data?.error || "บัญชีนี้ยังไม่ได้ยืนยัน OTP");
 
     setForm((prev) => ({
       ...prev,
@@ -83,7 +86,7 @@ function LoginPageInner() {
     return;
   }
 
-  alert(data?.error || "เข้าสู่ระบบไม่สำเร็จ");
+  showToast("error", data?.error || "เข้าสู่ระบบไม่สำเร็จ");
   return;
 }
 
@@ -112,7 +115,7 @@ function LoginPageInner() {
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          alert(data?.error || "สมัครไม่สำเร็จ");
+          showToast("error", data?.error || "สมัครไม่สำเร็จ");
           return;
         }
 
@@ -126,12 +129,26 @@ function LoginPageInner() {
           newPassword: "",
         });
 
-        alert("สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
+        showToast("success", "สมัครสำเร็จ กรุณากรอก OTP เพื่อยืนยันอีเมล");
         setMode("verifyOtp");
         return;
       }
 
       if (mode === "verifyOtp") {
+        if (!form.email.trim()) {
+  showToast("warning", "กรุณากรอกอีเมล");
+  return;
+}
+
+if (!form.otp.trim()) {
+  showToast("warning", "กรุณากรอก OTP");
+  return;
+}
+
+if (form.otp.trim().length !== 6) {
+  showToast("warning", "OTP ต้องมี 6 หลัก");
+  return;
+}
         const res = await fetch("/api/auth/verify-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -143,11 +160,11 @@ function LoginPageInner() {
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          alert(data?.error || "OTP ไม่ถูกต้อง");
+          showToast("error", data?.error || "OTP ไม่ถูกต้อง");
           return;
         }
 
-        alert("ยืนยันอีเมลสำเร็จ กรุณาเข้าสู่ระบบ");
+        showToast("success", "ยืนยันอีเมลสำเร็จ กรุณาเข้าสู่ระบบ");
         setDevOtp("");
         setMode("login");
         return;
@@ -165,12 +182,12 @@ function LoginPageInner() {
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          alert(data?.error || "ส่ง OTP ไม่สำเร็จ");
+          showToast("error", data?.error || "ส่ง OTP ไม่สำเร็จ");
           return;
         }
 
         setDevOtp(data?.devOtp || "");
-        alert("ส่ง OTP แล้ว กรุณากรอก OTP และรหัสผ่านใหม่");
+        showToast("success", "ส่ง OTP แล้ว กรุณากรอก OTP และรหัสผ่านใหม่");
         setMode("resetPassword");
         return;
       }
@@ -191,11 +208,11 @@ function LoginPageInner() {
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          alert(data?.error || "รีเซตรหัสผ่านไม่สำเร็จ");
+          showToast("error", data?.error || "รีเซตรหัสผ่านไม่สำเร็จ");
           return;
         }
 
-        alert("ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบ");
+        showToast("success", "ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบ");
         setDevOtp("");
         setMode("login");
       }

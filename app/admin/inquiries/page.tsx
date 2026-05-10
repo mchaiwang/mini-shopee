@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type UserMe = {
   id: string;
@@ -102,6 +103,8 @@ function getMessageType(msg: ChatMessage): "text" | "product" | "image" {
 }
 
 export default function AdminInquiriesPage() {
+  const { showToast } = useToast();
+
   const [me, setMe] = useState<UserMe | null>(null);
   const [rooms, setRooms] = useState<InquiryRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");
@@ -361,7 +364,7 @@ useEffect(() => {
       }
 
       if (res.status === 403) {
-        alert("ไม่มีสิทธิ์ใช้งานส่วนนี้");
+        showToast("warning", "ไม่มีสิทธิ์ใช้งานส่วนนี้");
         return;
       }
 
@@ -369,7 +372,7 @@ useEffect(() => {
 
       if (!res.ok) {
         console.error("sendMessage error:", data);
-        alert(data?.error || "ส่งข้อความไม่สำเร็จ");
+        showToast("error", data?.error || "ส่งข้อความไม่สำเร็จ");
         return;
       }
 
@@ -388,7 +391,7 @@ useEffect(() => {
       scrollToBottom();
     } catch (error) {
       console.error("sendMessage failed:", error);
-      alert("ส่งข้อความไม่สำเร็จ");
+      showToast("error", "ส่งข้อความไม่สำเร็จ");
     } finally {
       setSending(false);
     }
@@ -418,7 +421,7 @@ useEffect(() => {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || "ส่งสินค้าไม่สำเร็จ");
+        showToast("error", data?.error || "ส่งสินค้าไม่สำเร็จ");
         return;
       }
 
@@ -437,7 +440,7 @@ useEffect(() => {
       scrollToBottom();
     } catch (error) {
       console.error("sendProductMessage failed:", error);
-      alert("ส่งสินค้าไม่สำเร็จ");
+      showToast("error", "ส่งสินค้าไม่สำเร็จ");
     } finally {
       setSending(false);
     }
@@ -451,7 +454,7 @@ useEffect(() => {
     // Soft size guard — keep JSON storage manageable.
     // 4 MB raw → ~5.5 MB base64. Reject above ~3 MB to stay safe.
     if (file.size > 3 * 1024 * 1024) {
-      alert("ไฟล์รูปใหญ่เกินไป (สูงสุด 3 MB)");
+      showToast("warning", "ไฟล์รูปใหญ่เกินไป (สูงสุด 3 MB)");
       return;
     }
 
@@ -479,7 +482,7 @@ useEffect(() => {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || "ส่งรูปไม่สำเร็จ");
+        showToast("error", data?.error || "ส่งรูปไม่สำเร็จ");
         return;
       }
 
@@ -497,7 +500,7 @@ useEffect(() => {
       scrollToBottom();
     } catch (error) {
       console.error("sendImageMessage failed:", error);
-      alert("ส่งรูปไม่สำเร็จ");
+      showToast("error", "ส่งรูปไม่สำเร็จ");
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -557,7 +560,7 @@ useEffect(() => {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        alert(data?.error || "อัปเดตสถานะไม่สำเร็จ");
+        showToast("error", data?.error || "อัปเดตสถานะไม่สำเร็จ");
         return;
       }
 
@@ -568,7 +571,7 @@ useEffect(() => {
         );
       }
     } catch {
-      alert("อัปเดตสถานะไม่สำเร็จ");
+      showToast("error", "อัปเดตสถานะไม่สำเร็จ");
     }
   };
 
@@ -584,7 +587,7 @@ useEffect(() => {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || "ลบห้องแชทไม่สำเร็จ");
+        showToast("error", data?.error || "ลบห้องแชทไม่สำเร็จ");
         return;
       }
 
@@ -596,7 +599,7 @@ useEffect(() => {
         return next;
       });
     } catch {
-      alert("ลบห้องแชทไม่สำเร็จ");
+      showToast("error", "ลบห้องแชทไม่สำเร็จ");
     }
   };
 

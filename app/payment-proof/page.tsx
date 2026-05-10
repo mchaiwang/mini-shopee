@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Order = {
   orderId: string;
@@ -15,6 +16,8 @@ type Order = {
 };
 
 export default function PaymentProofPage() {
+  const { showToast } = useToast();
+
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [payerName, setPayerName] = useState("");
@@ -30,17 +33,17 @@ export default function PaymentProofPage() {
 
   const submitProof = async () => {
     if (!order) {
-      alert("ไม่พบออเดอร์");
+      showToast("error", "ไม่พบออเดอร์");
       return;
     }
 
     if (!payerName.trim()) {
-      alert("กรุณากรอกชื่อผู้โอน");
+      showToast("warning", "กรุณากรอกชื่อผู้โอน");
       return;
     }
 
     if (!selectedFile) {
-      alert("กรุณาเลือกไฟล์สลิป");
+      showToast("warning", "กรุณาเลือกไฟล์สลิป");
       return;
     }
 
@@ -60,16 +63,16 @@ export default function PaymentProofPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert(data.message || "ส่งหลักฐานการโอนไม่สำเร็จ");
+        showToast("error", data.message || "ส่งหลักฐานการโอนไม่สำเร็จ");
         return;
       }
 
       localStorage.removeItem("cart");
-      alert("ส่งหลักฐานการโอนสำเร็จ");
+      showToast("success", "ส่งหลักฐานการโอนสำเร็จ");
       router.push("/account");
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดตอนส่งสลิป");
+      showToast("error", "เกิดข้อผิดพลาดตอนส่งสลิป");
     } finally {
       setLoading(false);
     }

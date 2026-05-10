@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CreatorFinanceTipsCard } from "@/app/components/creator-promo";
+import { useToast } from "@/app/components/ToastProvider";
 
 type AuthUser = {
   id?: string;
@@ -198,6 +199,8 @@ function commissionsFromWithdraw(withdraw: WithdrawRecord): CommissionRecord[] {
 }
 
 export default function FinancePage() {
+  const { showToast } = useToast();
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -343,7 +346,7 @@ export default function FinancePage() {
       const me = authData?.user || null;
 
       if (!authRes.ok || !me) {
-        alert("กรุณาเข้าสู่ระบบก่อน");
+        showToast("warning", "กรุณาเข้าสู่ระบบก่อน");
         location.href = "/login";
         return;
       }
@@ -373,7 +376,7 @@ export default function FinancePage() {
       await loadCreatorOrders(me?.id);
     } catch (error) {
       console.error(error);
-      alert("โหลดข้อมูลการเงินไม่สำเร็จ");
+      showToast("error", "โหลดข้อมูลการเงินไม่สำเร็จ");
     }
   }
 
@@ -437,7 +440,7 @@ export default function FinancePage() {
         }
       } catch (error) {
         console.error(error);
-        alert("โหลดข้อมูลไม่สำเร็จ");
+        showToast("error", "โหลดข้อมูลไม่สำเร็จ");
       } finally {
         setLoading(false);
       }
@@ -536,7 +539,7 @@ export default function FinancePage() {
 
   async function handleWithdraw() {
     if (derivedWallet.pending <= 0) {
-      alert("ไม่มีเงินให้ถอน");
+      showToast("warning", "ไม่มีเงินให้ถอน");
       return;
     }
 
@@ -554,15 +557,15 @@ export default function FinancePage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ถอนเงินไม่สำเร็จ");
+        showToast("error", data?.message || "ถอนเงินไม่สำเร็จ");
         return;
       }
 
-      alert("ส่งคำขอถอนเงินแล้ว");
+      showToast("success", "ส่งคำขอถอนเงินแล้ว");
       await loadFinance();
     } catch (error) {
       console.error(error);
-      alert("ถอนเงินไม่สำเร็จ");
+      showToast("error", "ถอนเงินไม่สำเร็จ");
     } finally {
       setWithdrawing(false);
     }
@@ -583,14 +586,14 @@ export default function FinancePage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ลบรีวิวไม่สำเร็จ");
+        showToast("error", data?.message || "ลบรีวิวไม่สำเร็จ");
         return;
       }
 
       setMyReviews((prev) => prev.filter((item) => item.id !== reviewId));
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการลบรีวิว");
+      showToast("error", "เกิดข้อผิดพลาดในการลบรีวิว");
     } finally {
       setDeletingReviewId("");
     }
@@ -606,7 +609,7 @@ export default function FinancePage() {
     const reviewId = String(review?.id || "").trim();
 
     if (!reviewId) {
-      alert("ไม่พบรหัสรีวิว");
+      showToast("error", "ไม่พบรหัสรีวิว");
       return;
     }
 

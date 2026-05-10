@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useToast } from "@/app/components/ToastProvider";
 
 type OrderItem = {
   id?: string | number;
@@ -60,6 +61,8 @@ type CurrentUser = {
 };
 
 function CreatorNewReviewPageInner() {
+  const { showToast } = useToast();
+
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId") || "";
 
@@ -147,7 +150,7 @@ function CreatorNewReviewPageInner() {
         ]);
 
         if (!authRes.ok) {
-          alert("กรุณาเข้าสู่ระบบก่อน");
+          showToast("warning", "กรุณาเข้าสู่ระบบก่อน");
           window.location.href = "/login";
           return;
         }
@@ -157,7 +160,7 @@ function CreatorNewReviewPageInner() {
         setCurrentUser(me);
 
         if (!isCreatorUser(me)) {
-          alert("หน้านี้สำหรับครีเอเตอร์ที่ได้รับสิทธิ์แล้ว");
+          showToast("warning", "หน้านี้สำหรับครีเอเตอร์ที่ได้รับสิทธิ์แล้ว");
           window.location.href = "/profile";
           return;
         }
@@ -177,7 +180,7 @@ function CreatorNewReviewPageInner() {
           allOrders.find((item) => String(item.id) === String(orderId)) || null;
 
         if (!foundOrder) {
-          alert("ไม่พบออเดอร์ที่ต้องการรีวิว");
+          showToast("error", "ไม่พบออเดอร์ที่ต้องการรีวิว");
           window.location.href = "/orders";
           return;
         }
@@ -197,7 +200,7 @@ function CreatorNewReviewPageInner() {
           (meEmail && orderEmail && meEmail === orderEmail);
 
         if (!isOwner) {
-          alert("คุณไม่มีสิทธิ์รีวิวออเดอร์นี้");
+          showToast("warning", "คุณไม่มีสิทธิ์รีวิวออเดอร์นี้");
           window.location.href = "/orders";
           return;
         }
@@ -206,7 +209,7 @@ function CreatorNewReviewPageInner() {
   foundOrder.status !== "ได้รับสินค้าแล้ว" &&
   foundOrder.status !== "สำเร็จแล้ว"
 ) {
-  alert("สามารถรีวิวได้เฉพาะออเดอร์ที่ได้รับสินค้าแล้วหรือสำเร็จแล้ว");
+  showToast("warning", "สามารถรีวิวได้เฉพาะออเดอร์ที่ได้รับสินค้าแล้วหรือสำเร็จแล้ว");
   window.location.href = "/orders";
   return;
 }
@@ -226,7 +229,7 @@ function CreatorNewReviewPageInner() {
         setSelectedProductId(firstMatchedProductId);
       } catch (error) {
         console.error(error);
-        alert("โหลดหน้าสร้างรีวิวครีเอเตอร์ไม่สำเร็จ");
+        showToast("error", "โหลดหน้าสร้างรีวิวครีเอเตอร์ไม่สำเร็จ");
         window.location.href = "/orders";
       } finally {
         setLoading(false);
@@ -240,12 +243,12 @@ function CreatorNewReviewPageInner() {
     if (!order || !currentUser) return;
 
     if (!selectedProductId || !title.trim() || !story.trim()) {
-      alert("กรุณากรอกข้อมูลสำคัญให้ครบ");
+      showToast("warning", "กรุณากรอกข้อมูลสำคัญให้ครบ");
       return;
     }
 
     if (!selectedProduct?.slug) {
-      alert("ไม่พบ slug ของสินค้า จึงยังสร้างลิงก์ซื้อไม่ได้");
+      showToast("error", "ไม่พบ slug ของสินค้า จึงยังสร้างลิงก์ซื้อไม่ได้");
       return;
     }
 
@@ -297,15 +300,15 @@ function CreatorNewReviewPageInner() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ส่งรีวิวไม่สำเร็จ");
+        showToast("error", data?.message || "ส่งรีวิวไม่สำเร็จ");
         return;
       }
 
-      alert("ส่งรีวิวครีเอเตอร์เรียบร้อยแล้ว");
+      showToast("success", "ส่งรีวิวครีเอเตอร์เรียบร้อยแล้ว");
       window.location.href = "/orders";
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการส่งรีวิว");
+      showToast("error", "เกิดข้อผิดพลาดในการส่งรีวิว");
     } finally {
       setSaving(false);
     }

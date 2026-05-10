@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 export default function AdminCreatorsPage() {
+  const { showToast } = useToast();
+
   const [users, setUsers] = useState<any[]>([]);
 
   const load = async () => {
@@ -46,7 +49,7 @@ export default function AdminCreatorsPage() {
         },
       }),
     });
-    alert("บันทึกแล้ว");
+    showToast("success", "บันทึกแล้ว");
     load();
   };
 

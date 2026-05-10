@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useToast } from "@/app/components/ToastProvider";
 
 type ReviewTitleItem = {
   id: string;
@@ -11,6 +12,8 @@ type ReviewTitleItem = {
 };
 
 export default function AdminReviewTitlesPage() {
+  const { showToast } = useToast();
+
   const [items, setItems] = useState<ReviewTitleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,7 +41,7 @@ export default function AdminReviewTitlesPage() {
       setItems(Array.isArray(data?.items) ? data.items : []);
     } catch (error) {
       console.error(error);
-      alert("โหลดหัวข้อรีวิวไม่สำเร็จ");
+      showToast("error", "โหลดหัวข้อรีวิวไม่สำเร็จ");
       setItems([]);
     } finally {
       setLoading(false);
@@ -84,7 +87,7 @@ export default function AdminReviewTitlesPage() {
       const data = await res.json();
 
       if (!data?.success) {
-        alert(data?.message || "เพิ่มหัวข้อรีวิวไม่สำเร็จ");
+        showToast("error", data?.message || "เพิ่มหัวข้อรีวิวไม่สำเร็จ");
         return;
       }
 
@@ -92,7 +95,7 @@ export default function AdminReviewTitlesPage() {
       await load();
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการเพิ่มหัวข้อรีวิว");
+      showToast("error", "เกิดข้อผิดพลาดในการเพิ่มหัวข้อรีวิว");
     } finally {
       setSaving(false);
     }
@@ -139,7 +142,7 @@ export default function AdminReviewTitlesPage() {
       const data = await res.json();
 
       if (!data?.success) {
-        alert(data?.message || "แก้ไขไม่สำเร็จ");
+        showToast("error", data?.message || "แก้ไขไม่สำเร็จ");
         return;
       }
 
@@ -147,7 +150,7 @@ export default function AdminReviewTitlesPage() {
       await load();
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการแก้ไข");
+      showToast("error", "เกิดข้อผิดพลาดในการแก้ไข");
     } finally {
       setSaving(false);
     }
@@ -178,7 +181,7 @@ export default function AdminReviewTitlesPage() {
       const data = await res.json();
 
       if (!data?.success) {
-        alert(data?.message || "ลบไม่สำเร็จ");
+        showToast("error", data?.message || "ลบไม่สำเร็จ");
         return;
       }
 
@@ -187,7 +190,7 @@ export default function AdminReviewTitlesPage() {
       await load();
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการลบ");
+      showToast("error", "เกิดข้อผิดพลาดในการลบ");
     } finally {
       setSaving(false);
     }
@@ -218,7 +221,7 @@ export default function AdminReviewTitlesPage() {
       await load();
     } catch (error) {
       console.error(error);
-      alert("อัปเดตสถานะไม่สำเร็จ");
+      showToast("error", "อัปเดตสถานะไม่สำเร็จ");
     } finally {
       setSaving(false);
     }

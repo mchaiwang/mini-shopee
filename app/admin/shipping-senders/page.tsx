@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Sender = {
   id: string;
@@ -22,6 +23,8 @@ const emptyForm: Sender = {
 };
 
 export default function AdminShippingSendersPage() {
+  const { showToast } = useToast();
+
   const [senders, setSenders] = useState<Sender[]>([]);
   const [form, setForm] = useState<Sender>(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -51,7 +54,7 @@ export default function AdminShippingSendersPage() {
 
   async function saveSender() {
   if (!form.name.trim() || !form.senderName.trim() || !form.phone.trim() || !form.address.trim()) {
-    alert("กรุณากรอกข้อมูลผู้ส่งให้ครบ");
+    showToast("warning", "กรุณากรอกข้อมูลผู้ส่งให้ครบ");
     return;
   }
 
@@ -76,18 +79,18 @@ export default function AdminShippingSendersPage() {
     const data = await res.json();
 
     if (!res.ok || !data?.success) {
-      alert(data?.message || "บันทึกข้อมูลไม่สำเร็จ");
+      showToast("error", data?.message || "บันทึกข้อมูลไม่สำเร็จ");
       return;
     }
 
-    alert("บันทึกสำเร็จ");
+    showToast("success", "บันทึกสำเร็จ");
 
     setForm(emptyForm);
     await loadSenders();
 
   } catch (err) {
     console.error(err);
-    alert("บันทึกข้อมูลไม่สำเร็จ");
+    showToast("error", "บันทึกข้อมูลไม่สำเร็จ");
   } finally {
     setSaving(false);
   }
@@ -106,13 +109,13 @@ export default function AdminShippingSendersPage() {
       const data = await res.json();
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ลบข้อมูลไม่สำเร็จ");
+        showToast("error", data?.message || "ลบข้อมูลไม่สำเร็จ");
         return;
       }
 
       await loadSenders();
     } catch {
-      alert("ลบข้อมูลไม่สำเร็จ");
+      showToast("error", "ลบข้อมูลไม่สำเร็จ");
     }
   }
 
@@ -127,13 +130,13 @@ export default function AdminShippingSendersPage() {
       const data = await res.json();
 
       if (!res.ok || !data?.success) {
-        alert(data?.message || "ตั้งค่าเริ่มต้นไม่สำเร็จ");
+        showToast("error", data?.message || "ตั้งค่าเริ่มต้นไม่สำเร็จ");
         return;
       }
 
       await loadSenders();
     } catch {
-      alert("ตั้งค่าเริ่มต้นไม่สำเร็จ");
+      showToast("error", "ตั้งค่าเริ่มต้นไม่สำเร็จ");
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type Product = {
   id: number;
@@ -30,6 +31,8 @@ type CategoryNode = {
 };
 
 export default function AdminProductsPage() {
+  const { showToast } = useToast();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -145,7 +148,7 @@ export default function AdminProductsPage() {
       setProducts(normalized);
     } catch (error) {
       console.error(error);
-      alert("โหลดข้อมูลสินค้าไม่สำเร็จ");
+      showToast("error", "โหลดข้อมูลสินค้าไม่สำเร็จ");
     }
   };
 
@@ -156,7 +159,7 @@ export default function AdminProductsPage() {
       setCategories(Array.isArray(data?.categories) ? data.categories : []);
     } catch (error) {
       console.error(error);
-      alert("โหลดแคทตาล็อคสินค้าไม่สำเร็จ");
+      showToast("error", "โหลดแคทตาล็อคสินค้าไม่สำเร็จ");
       setCategories([]);
     }
   };
@@ -178,7 +181,7 @@ export default function AdminProductsPage() {
         const me = data?.user || null;
 
         if (!me || me.role !== "admin") {
-          alert("ไม่มีสิทธิ์เข้าใช้งานหน้านี้");
+          showToast("warning", "ไม่มีสิทธิ์เข้าใช้งานหน้านี้");
           window.location.href = "/";
           return;
         }
@@ -284,10 +287,10 @@ export default function AdminProductsPage() {
         return merged;
       });
 
-      alert(`อัปโหลดสำเร็จ ${uploadedUrls.length} รูป`);
+      showToast("success", `อัปโหลดสำเร็จ ${uploadedUrls.length} รูป`);
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการอัปโหลดรูป");
+      showToast("error", "เกิดข้อผิดพลาดในการอัปโหลดรูป");
     } finally {
       setUploadingImage(false);
     }
@@ -368,12 +371,12 @@ export default function AdminProductsPage() {
       !finalCategory ||
       !stock
     ) {
-      alert("กรอกข้อมูลสินค้าให้ครบ");
+      showToast("warning", "กรอกข้อมูลสินค้าให้ครบ");
       return;
     }
 
     if (Number.isNaN(Number(price)) || Number.isNaN(Number(stock))) {
-      alert("กรุณากรอกราคาและสต๊อกให้เป็นตัวเลข");
+      showToast("warning", "กรุณากรอกราคาและสต๊อกให้เป็นตัวเลข");
       return;
     }
 
@@ -417,7 +420,7 @@ export default function AdminProductsPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert(data.message || "บันทึกสินค้าไม่สำเร็จ");
+        showToast("error", data.message || "บันทึกสินค้าไม่สำเร็จ");
         return;
       }
 
@@ -425,10 +428,10 @@ export default function AdminProductsPage() {
 
       resetForm();
       await loadProducts();
-      alert(wasEditing ? "แก้ไขสินค้าสำเร็จ" : "เพิ่มสินค้าสำเร็จ");
+      showToast("success", wasEditing ? "แก้ไขสินค้าสำเร็จ" : "เพิ่มสินค้าสำเร็จ");
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการบันทึกสินค้า");
+      showToast("error", "เกิดข้อผิดพลาดในการบันทึกสินค้า");
     } finally {
       setLoading(false);
     }
@@ -446,15 +449,15 @@ export default function AdminProductsPage() {
       const data = await res.json();
 
       if (!data.success) {
-        alert(data.message || "ลบสินค้าไม่สำเร็จ");
+        showToast("error", data.message || "ลบสินค้าไม่สำเร็จ");
         return;
       }
 
       await loadProducts();
-      alert("ลบสินค้าเรียบร้อย");
+      showToast("success", "ลบสินค้าเรียบร้อย");
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการลบสินค้า");
+      showToast("error", "เกิดข้อผิดพลาดในการลบสินค้า");
     }
   };
 

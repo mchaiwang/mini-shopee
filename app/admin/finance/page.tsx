@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/app/components/ToastProvider";
 
 type User = {
   id?: string;
@@ -171,6 +172,8 @@ function paymentText(user?: User) {
 }
 
 export default function AdminFinancePage() {
+  const { showToast } = useToast();
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [admin, setAdmin] = useState<User | null>(null);
@@ -198,7 +201,7 @@ export default function AdminFinancePage() {
       const me = authData?.user || null;
 
       if (!authRes.ok || !me || me.role !== "admin") {
-        alert("หน้านี้สำหรับแอดมินเท่านั้น");
+        showToast("warning", "หน้านี้สำหรับแอดมินเท่านั้น");
         location.href = "/login?next=/admin/finance";
         return;
       }
@@ -212,7 +215,7 @@ export default function AdminFinancePage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || data?.success === false) {
-        alert(data?.message || "โหลดข้อมูลคอมมิชชั่นไม่สำเร็จ");
+        showToast("error", data?.message || "โหลดข้อมูลคอมมิชชั่นไม่สำเร็จ");
         setRows([]);
         return;
       }
@@ -220,7 +223,7 @@ export default function AdminFinancePage() {
       setRows(Array.isArray(data?.rows) ? data.rows : []);
     } catch (err) {
       console.error(err);
-      alert("โหลดข้อมูลการเงินไม่สำเร็จ");
+      showToast("error", "โหลดข้อมูลการเงินไม่สำเร็จ");
       setRows([]);
     } finally {
       setLoading(false);
@@ -367,7 +370,7 @@ const passDateTo = dateTo
 
   async function updateSelectedStatus(nextStatus: string) {
     if (selectedIds.length === 0) {
-      alert("กรุณาเลือกรายการก่อน");
+      showToast("warning", "กรุณาเลือกรายการก่อน");
       return;
     }
 
@@ -402,7 +405,7 @@ const passDateTo = dateTo
       await loadData();
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "อัปเดตแบบชุดไม่สำเร็จ");
+      showToast("error", err instanceof Error ? err.message : "อัปเดตแบบชุดไม่สำเร็จ");
     } finally {
       setSavingId("");
     }
@@ -424,7 +427,7 @@ const passDateTo = dateTo
 
       const data = await res.json().catch(() => null);
       if (!res.ok || data?.success === false) {
-        alert(data?.message || "ลบรายการไม่สำเร็จ");
+        showToast("error", data?.message || "ลบรายการไม่สำเร็จ");
         return;
       }
 
@@ -433,7 +436,7 @@ const passDateTo = dateTo
       await loadData();
     } catch (err) {
       console.error(err);
-      alert("ลบรายการไม่สำเร็จ");
+      showToast("error", "ลบรายการไม่สำเร็จ");
     } finally {
       setSavingId("");
     }
@@ -441,7 +444,7 @@ const passDateTo = dateTo
 
   async function deleteSelectedCommissions() {
     if (selectedIds.length === 0) {
-      alert("กรุณาเลือกรายการก่อน");
+      showToast("warning", "กรุณาเลือกรายการก่อน");
       return;
     }
 
@@ -472,7 +475,7 @@ const passDateTo = dateTo
       await loadData();
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "ลบแบบชุดไม่สำเร็จ");
+      showToast("error", err instanceof Error ? err.message : "ลบแบบชุดไม่สำเร็จ");
     } finally {
       setSavingId("");
     }
@@ -484,7 +487,7 @@ const passDateTo = dateTo
     const amount = Number(editAmount || 0);
 
     if (amount < 0 || saleAmount < 0 || rate < 0) {
-      alert("ตัวเลขต้องไม่ติดลบ");
+      showToast("warning", "ตัวเลขต้องไม่ติดลบ");
       return;
     }
 
@@ -509,7 +512,7 @@ const passDateTo = dateTo
 
       const data = await res.json().catch(() => null);
       if (!res.ok || data?.success === false) {
-        alert(data?.message || "บันทึกตัวเลขไม่สำเร็จ");
+        showToast("error", data?.message || "บันทึกตัวเลขไม่สำเร็จ");
         return;
       }
 
@@ -518,7 +521,7 @@ const passDateTo = dateTo
       if (refreshedRow) setSelected(refreshedRow);
     } catch (err) {
       console.error(err);
-      alert("บันทึกตัวเลขไม่สำเร็จ");
+      showToast("error", "บันทึกตัวเลขไม่สำเร็จ");
     } finally {
       setSavingId("");
     }
@@ -545,7 +548,7 @@ const passDateTo = dateTo
       const data = await res.json().catch(() => null);
 
       if (!res.ok || data?.success === false) {
-        alert(data?.message || "อัปเดตสถานะไม่สำเร็จ");
+        showToast("error", data?.message || "อัปเดตสถานะไม่สำเร็จ");
         return;
       }
 
@@ -553,7 +556,7 @@ const passDateTo = dateTo
       setSelected(null);
     } catch (err) {
       console.error(err);
-      alert("อัปเดตสถานะไม่สำเร็จ");
+      showToast("error", "อัปเดตสถานะไม่สำเร็จ");
     } finally {
       setSavingId("");
     }
