@@ -42,6 +42,152 @@ function statusText(status: string) {
   return s || "รอจัดเตรียมสินค้า";
 }
 
+/* ════════════════════════════════════════════
+   Premium Step Tracking helpers
+   ย้ายรูปแบบ Step จากไฟล์คำสั่งซื้อหลักมาใช้กับหน้านี้
+   ════════════════════════════════════════════ */
+function getOrderStep(status?: string) {
+  const s = String(status || "").trim().toLowerCase();
+
+  if (s === "ได้รับสินค้าแล้ว" || s === "สำเร็จแล้ว" || s === "delivered") return 4;
+  if (s === "จัดส่งแล้ว" || s === "shipped") return 3;
+  if (s === "รอจัดส่ง" || s === "shipping") return 2;
+  if (
+    s === "อนุมัติ" ||
+    s === "อนุมัติแล้ว" ||
+    s === "ชำระเงินแล้ว" ||
+    s === "กำลังจัดเตรียมสินค้า" ||
+    s === "approved" ||
+    s === "preparing"
+  ) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function OrderStatusSteps({
+  status,
+  isMobile,
+}: {
+  status?: string;
+  isMobile: boolean;
+}) {
+  const currentStep = getOrderStep(status);
+
+  const steps = [
+    {
+      id: 1,
+      label: "อนุมัติ",
+      sub: "ร้านรับคำสั่งซื้อแล้ว",
+      icon: "✅",
+    },
+    {
+      id: 2,
+      label: "รอจัดส่ง",
+      sub: "กำลังเตรียมสินค้า",
+      icon: "📦",
+    },
+    {
+      id: 3,
+      label: "จัดส่งแล้ว",
+      sub: "พัสดุออกจากร้านแล้ว",
+      icon: "🚚",
+    },
+    {
+      id: 4,
+      label: "ได้รับสินค้าแล้ว",
+      sub: "ลูกค้าได้รับของแล้ว",
+      icon: "☑️",
+    },
+  ];
+
+  return (
+    <div style={orderStepOuterStyle}>
+      <div style={orderStepHeaderStyle}>
+        <div>
+          <div style={orderStepTitleStyle}>ติดตามสถานะคำสั่งซื้อ</div>
+          <div style={orderStepSubTitleStyle}>
+            ระบบจะแสดงขั้นตอนตั้งแต่อนุมัติ จัดส่ง จนถึงได้รับสินค้า
+          </div>
+        </div>
+
+       
+      </div>
+
+      <div
+        style={{
+          ...orderStepWrapStyle,
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+        }}
+      >
+        {steps.map((step, index) => {
+          const done = currentStep >= step.id;
+          const active = currentStep === step.id;
+
+          return (
+            <div
+              key={step.id}
+              style={{
+                ...orderStepItemStyle,
+                gridTemplateColumns: isMobile ? "52px 1fr" : "1fr",
+                textAlign: isMobile ? "left" : "center",
+                justifyItems: isMobile ? "start" : "center",
+              }}
+            >
+              {!isMobile && index < steps.length - 1 ? (
+                <div
+                  style={{
+                    ...orderStepLineStyle,
+                    background: currentStep > step.id ? "#16a34a" : "#e5e7eb",
+                  }}
+                />
+              ) : null}
+
+              <div
+                style={{
+                  ...orderStepCircleStyle,
+                  background: done ? "#16a34a" : "#e5e7eb",
+                  color: done ? "#fff" : "#6b7280",
+                  transform: active ? "scale(1.12)" : "scale(1)",
+                  boxShadow: active
+                    ? "0 0 0 7px rgba(22,163,74,0.14), 0 10px 22px rgba(22,163,74,0.22)"
+                    : "none",
+                }}
+              >
+                {step.icon}
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    ...orderStepLabelStyle,
+                    color: done ? "#16a34a" : "#6b7280",
+                    fontWeight: active ? 950 : 850,
+                  }}
+                >
+                  {step.label}
+                </div>
+
+                <div
+                  style={{
+                    ...orderStepDescStyle,
+                    color: done ? "#15803d" : "#9ca3af",
+                  }}
+                >
+                  {step.sub}
+                </div>
+
+                {active ? <div style={activeStepTagStyle}>กำลังดำเนินการ</div> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function getOrderId(order: any) {
   return String(order?.id || order?.orderId || order?._id || "-");
 }
@@ -81,6 +227,19 @@ export default function GuestOrdersPage() {
   const [searched, setSearched] = useState(false);
   const [message, setMessage] = useState("");
   const [searchedPhoneRaw, setSearchedPhoneRaw] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+
+  useEffect(() => {
+    function updateIsMobile() {
+      setIsMobile(window.innerWidth < 640);
+    }
+
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+
+    return () => window.removeEventListener("resize", updateIsMobile);
+  }, []);
 
   async function searchOrders() {
     const cleanPhone = phone.replace(/\D/g, "");
@@ -205,6 +364,9 @@ export default function GuestOrdersPage() {
                     <div style={statusPill}>{statusText(order.status)}</div>
                   </div>
 
+                  {/* Step Tracker */}
+                  <OrderStatusSteps status={order.status} isMobile={isMobile} />
+
                   <div style={infoGrid}>
                     {order.createdAt && (
                       <div>
@@ -282,11 +444,11 @@ export default function GuestOrdersPage() {
       ) : (
         <>
           <section style={heroCard}>
-            <div style={smallBadge}>สำหรับลูกค้าที่ยังไม่ได้สมัครสมาชิก</div>
+            <div style={smallBadge}>ซื้อได้ทันที ไม่ต้องสมัครสมาชิก</div>
             <h1 style={title}>ตรวจสอบคำสั่งซื้อ / ตามของ</h1>
             <p style={desc}>
               กรอกเบอร์โทรที่ใช้สั่งซื้อ ระบบจะแสดงคำสั่งซื้อของคุณทันที
-              โดยไม่ต้องเข้าสู่ระบบ
+              พร้อมสถานะสินค้า เลขพัสดุ และปุ่มทักแชทตามของ โดยไม่ต้องเข้าสู่ระบบ
             </p>
 
             {message && <div style={noticeBox}>📌 {message}</div>}
@@ -314,8 +476,8 @@ export default function GuestOrdersPage() {
             </div>
 
             <div style={trustBox}>
-              🛡️ ร้านสามารถตรวจสอบคำสั่งซื้อจากเบอร์โทรของคุณได้
-              หากไม่ได้รับสินค้า สามารถกดปุ่มทักแชท / ตามของได้ทันที
+              🛡️ ไม่ต้องสมัครสมาชิกก็ซื้อและติดตามสินค้าได้
+              เพียงใช้เบอร์โทรที่กรอกตอนสั่งซื้อ หากมีข้อสงสัยสามารถกดปุ่มทักแชท / ตามของได้ทันที
             </div>
           </section>
 
@@ -331,6 +493,9 @@ export default function GuestOrdersPage() {
 
                     <div style={statusPill}>{statusText(order.status)}</div>
                   </div>
+
+                  {/* Step Tracker */}
+                  <OrderStatusSteps status={order.status} isMobile={isMobile} />
 
                   <div style={infoGrid}>
                     {order.createdAt && (
@@ -695,5 +860,98 @@ const backButton: React.CSSProperties = {
   border: "1px solid #ffb9a5",
   borderRadius: 16,
   padding: "14px 18px",
+  fontWeight: 900,
+};
+
+/* ════════════════════════════════════════════
+   Premium Step Tracker styles
+   ════════════════════════════════════════════ */
+const orderStepOuterStyle: React.CSSProperties = {
+  margin: "16px 0 18px",
+  padding: "16px",
+  borderRadius: 18,
+  border: "1px solid #bbf7d0",
+  background: "linear-gradient(135deg,#f0fdf4 0%,#ffffff 100%)",
+  boxShadow: "0 8px 22px rgba(22,163,74,0.08)",
+};
+
+const orderStepHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "center",
+  flexWrap: "wrap",
+  marginBottom: 14,
+};
+
+const orderStepTitleStyle: React.CSSProperties = {
+  color: "#064e3b",
+  fontSize: 18,
+  fontWeight: 950,
+};
+
+const orderStepSubTitleStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
+  fontWeight: 700,
+  marginTop: 4,
+};
+
+
+const orderStepWrapStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  position: "relative",
+};
+
+const orderStepItemStyle: React.CSSProperties = {
+  position: "relative",
+  display: "grid",
+  gap: 8,
+  alignItems: "start",
+  minWidth: 0,
+};
+
+const orderStepCircleStyle: React.CSSProperties = {
+  width: 48,
+  height: 48,
+  borderRadius: 999,
+  display: "grid",
+  placeItems: "center",
+  fontSize: 20,
+  transition: "0.2s ease",
+  zIndex: 2,
+};
+
+const orderStepLabelStyle: React.CSSProperties = {
+  fontSize: 14,
+  lineHeight: 1.25,
+};
+
+const orderStepDescStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 700,
+  marginTop: 4,
+  lineHeight: 1.35,
+};
+
+const orderStepLineStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 24,
+  left: "calc(50% + 24px)",
+  width: "calc(100% - 48px)",
+  height: 5,
+  borderRadius: 999,
+  zIndex: 1,
+};
+
+const activeStepTagStyle: React.CSSProperties = {
+  display: "inline-flex",
+  marginTop: 7,
+  padding: "4px 10px",
+  borderRadius: 999,
+  background: "#dcfce7",
+  color: "#15803d",
+  fontSize: 12,
   fontWeight: 900,
 };
